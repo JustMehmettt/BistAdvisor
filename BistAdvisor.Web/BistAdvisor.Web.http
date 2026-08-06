@@ -1,0 +1,6 @@
+@BistAdvisor.Web_HostAddress = http://localhost:5010
+
+GET {{BistAdvisor.Web_HostAddress}}/weatherforecast/
+Accept: application/json
+
+###
