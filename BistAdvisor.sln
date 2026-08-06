@@ -2,6 +2,16 @@
 Microsoft Visual Studio Solution File, Format Version 12.00
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "BistAdvisor.Web", "BistAdvisor.Web\BistAdvisor.Web.csproj", "{DF5B11E0-2C38-4331-B936-6174E1DFD945}"
 EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "BistAdvisor.Domain", "BistAdvisor.Domain\BistAdvisor.Domain.csproj", "{5248B5B2-7798-4AEA-AD89-2F3CF2C4ABE0}"
+EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "BistAdvisor.Application", "BistAdvisor.Application\BistAdvisor.Application.csproj", "{551F5433-88E1-455A-A51C-DB6232C22AFA}"
+EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "BistAdvisor.Infrastructure", "BistAdvisor.Infrastructure\BistAdvisor.Infrastructure.csproj", "{D6722BC5-2249-45EB-AAF8-83EF5C4CCAC4}"
+EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "BistAdvisor.Worker", "BistAdvisor.Worker\BistAdvisor.Worker.csproj", "{C621C49E-D0EA-47C8-A223-274F592B07BB}"
+EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "BistAdvisor.Tests", "BistAdvisor.Tests\BistAdvisor.Tests.csproj", "{01B64DE5-881C-4302-8B31-9A5594F1E026}"
+EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
 		Debug|Any CPU = Debug|Any CPU
@@ -12,5 +22,25 @@ Global
 		{DF5B11E0-2C38-4331-B936-6174E1DFD945}.Debug|Any CPU.Build.0 = Debug|Any CPU
 		{DF5B11E0-2C38-4331-B936-6174E1DFD945}.Release|Any CPU.ActiveCfg = Release|Any CPU
 		{DF5B11E0-2C38-4331-B936-6174E1DFD945}.Release|Any CPU.Build.0 = Release|Any CPU
+		{5248B5B2-7798-4AEA-AD89-2F3CF2C4ABE0}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{5248B5B2-7798-4AEA-AD89-2F3CF2C4ABE0}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{5248B5B2-7798-4AEA-AD89-2F3CF2C4ABE0}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{5248B5B2-7798-4AEA-AD89-2F3CF2C4ABE0}.Release|Any CPU.Build.0 = Release|Any CPU
+		{551F5433-88E1-455A-A51C-DB6232C22AFA}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{551F5433-88E1-455A-A51C-DB6232C22AFA}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{551F5433-88E1-455A-A51C-DB6232C22AFA}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{551F5433-88E1-455A-A51C-DB6232C22AFA}.Release|Any CPU.Build.0 = Release|Any CPU
+		{D6722BC5-2249-45EB-AAF8-83EF5C4CCAC4}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{D6722BC5-2249-45EB-AAF8-83EF5C4CCAC4}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{D6722BC5-2249-45EB-AAF8-83EF5C4CCAC4}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{D6722BC5-2249-45EB-AAF8-83EF5C4CCAC4}.Release|Any CPU.Build.0 = Release|Any CPU
+		{C621C49E-D0EA-47C8-A223-274F592B07BB}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{C621C49E-D0EA-47C8-A223-274F592B07BB}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{C621C49E-D0EA-47C8-A223-274F592B07BB}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{C621C49E-D0EA-47C8-A223-274F592B07BB}.Release|Any CPU.Build.0 = Release|Any CPU
+		{01B64DE5-881C-4302-8B31-9A5594F1E026}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{01B64DE5-881C-4302-8B31-9A5594F1E026}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{01B64DE5-881C-4302-8B31-9A5594F1E026}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{01B64DE5-881C-4302-8B31-9A5594F1E026}.Release|Any CPU.Build.0 = Release|Any CPU
 	EndGlobalSection
 EndGlobal
