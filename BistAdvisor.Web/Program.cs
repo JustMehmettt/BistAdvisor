@@ -2,6 +2,7 @@ using BistAdvisor.Application.MarketData;
 using BistAdvisor.Infrastructure.Data;
 using BistAdvisor.Infrastructure.MarketData;
 using Microsoft.EntityFrameworkCore;
+using Microsoft.AspNetCore.Mvc;
 
 var builder = WebApplication.CreateBuilder(args);
 
@@ -12,6 +13,7 @@ builder.Services.AddDbContext<ApplicationDbContext>(options =>
     options.UseSqlServer(builder.Configuration.GetConnectionString("DefaultConnection")));
 
 builder.Services.AddScoped<IMarketDataProvider, MockMarketDataProvider>();
+builder.Services.AddScoped<IPriceDataService, PriceDataService>();
 
 var app = builder.Build();
 
@@ -43,6 +45,16 @@ app.MapGet("/test-yahoo", async (IMarketDataProvider provider) =>
         DateTimeOffset.UtcNow);
 
     return Results.Ok(data);
+});
+
+app.MapPost("/test-sync/{symbol}", async (string symbol, [FromServices] IPriceDataService priceDataService) =>
+{
+    var count = await priceDataService.SyncHistoricalDataAsync(
+        symbol,
+        DateTimeOffset.UtcNow.AddDays(-30),
+        DateTimeOffset.UtcNow);
+
+    return Results.Ok(new { InsertedCount = count });
 });
 
 app.Run();
