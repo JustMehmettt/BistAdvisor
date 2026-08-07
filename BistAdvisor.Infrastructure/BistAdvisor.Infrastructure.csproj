@@ -11,6 +11,7 @@
         <PrivateAssets>all</PrivateAssets>
       </PackageReference>
       <PackageReference Include="Microsoft.EntityFrameworkCore.SqlServer" Version="8.0.11" />
+      <PackageReference Include="YahooFinanceApi" Version="2.3.3" />
     </ItemGroup>
 
     <PropertyGroup>
