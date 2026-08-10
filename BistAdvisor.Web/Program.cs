@@ -5,7 +5,6 @@ using BistAdvisor.Infrastructure.Data;
 using BistAdvisor.Infrastructure.MarketData;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.AspNetCore.Mvc;
-using BistAdvisor.Application.Indicators;
 using BistAdvisor.Domain.Entities;
 
 var builder = WebApplication.CreateBuilder(args);
@@ -70,11 +69,37 @@ app.MapGet("test-rsi/{symbol}", async (string symbol, ApplicationDbContext db) =
     return Results.Ok(new { Symbol = symbol, BarCount = priceBars.Count, Rsi = rsi });
 });
 
+app.MapGet("/test-macd/{symbol}", async (string symbol, ApplicationDbContext db) =>
+{
+    var stock = await db.Stocks.FirstOrDefaultAsync(s => s.Symbol == symbol);
+    if (stock is null)
+    {
+        return Results.NotFound($"'{symbol}' stock not found.");
+    }
+    
+    var priceBars = await db.PriceBars
+        .Where(p => p.StockId == stock.Id && p.Interval == PriceInterval.Daily)
+        .OrderBy(p => p.BarTime)
+        .ToListAsync();
+    
+    var macdCalculator = new MacdCalculator();
+    var macd = macdCalculator.Calculate(priceBars);
+    
+    return Results.Ok(new
+    {
+        Symbol = symbol, 
+        BarCount = priceBars.Count,
+        macd.MacdLine,
+        macd.SignalLine,
+        macd.Histogram
+    });
+});
+
 app.MapPost("/test-sync/{symbol}", async (string symbol, [FromServices] IPriceDataService priceDataService) =>
 {
     var count = await priceDataService.SyncHistoricalDataAsync(
         symbol,
-        DateTimeOffset.UtcNow.AddDays(-30),
+        DateTimeOffset.UtcNow.AddDays(-90),
         DateTimeOffset.UtcNow);
 
     return Results.Ok(new { InsertedCount = count });
