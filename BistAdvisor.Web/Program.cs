@@ -1,8 +1,12 @@
+using System.Linq.Expressions;
+using BistAdvisor.Application.Indicators;
 using BistAdvisor.Application.MarketData;
 using BistAdvisor.Infrastructure.Data;
 using BistAdvisor.Infrastructure.MarketData;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.AspNetCore.Mvc;
+using BistAdvisor.Application.Indicators;
+using BistAdvisor.Domain.Entities;
 
 var builder = WebApplication.CreateBuilder(args);
 
@@ -45,6 +49,25 @@ app.MapGet("/test-yahoo", async (IMarketDataProvider provider) =>
         DateTimeOffset.UtcNow);
 
     return Results.Ok(data);
+});
+
+app.MapGet("test-rsi/{symbol}", async (string symbol, ApplicationDbContext db) =>
+{
+    var stock = await db.Stocks.FirstOrDefaultAsync(s => s.Symbol == symbol);
+    if (stock == null)
+    {
+        return Results.NotFound($"'{symbol}' stock not found.");
+    }
+
+    var priceBars = await db.PriceBars
+        .Where(p => p.StockId == stock.Id && p.Interval == PriceInterval.Daily)
+        .OrderBy(p => p.BarTime)
+        .ToListAsync();
+
+    var rsiCalculator = new RsiCalculator();
+    var rsi = rsiCalculator.Calculate(priceBars);
+
+    return Results.Ok(new { Symbol = symbol, BarCount = priceBars.Count, Rsi = rsi });
 });
 
 app.MapPost("/test-sync/{symbol}", async (string symbol, [FromServices] IPriceDataService priceDataService) =>
