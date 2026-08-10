@@ -123,6 +123,33 @@ app.MapGet("/test-ema/{symbol}", async (string symbol, ApplicationDbContext db) 
     });
 });
 
+app.MapGet("/test-bollinger/{symbol}", async (string symbol, ApplicationDbContext db) =>
+{
+    var stock = await db.Stocks.FirstOrDefaultAsync(s => s.Symbol == symbol);
+    if (stock is null)
+    {
+        return Results.NotFound($"'{symbol}' stock not found.");
+    }
+    
+    var priceBars = await db.PriceBars
+        .Where(p => p.StockId == stock.Id && p.Interval == PriceInterval.Daily)
+        .OrderBy(p => p.BarTime)
+        .ToListAsync();
+
+    var bollingerCalculator = new BollingerBandsCalculator();
+    var bollinger = bollingerCalculator.Calculate(priceBars);
+
+    return Results.Ok(new
+    {
+        Symbol = symbol,
+        BarCount = priceBars.Count,
+        bollinger.CurrentPrice,
+        bollinger.UpperBand,
+        bollinger.MiddleBand,
+        bollinger.LowerBand,
+    });
+});
+
 app.MapPost("/test-sync/{symbol}", async (string symbol, [FromServices] IPriceDataService priceDataService) =>
 {
     var count = await priceDataService.SyncHistoricalDataAsync(
