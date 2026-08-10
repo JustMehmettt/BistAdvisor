@@ -150,6 +150,31 @@ app.MapGet("/test-bollinger/{symbol}", async (string symbol, ApplicationDbContex
     });
 });
 
+app.MapGet("/test-stochastic/{symbol}", async (string symbol, ApplicationDbContext db) =>
+{
+    var stock = await db.Stocks.FirstOrDefaultAsync(s => s.Symbol == symbol);
+    if (stock is null)
+    {
+        return Results.NotFound($"'{symbol}' bulunamadı.");
+    }
+
+    var priceBars = await db.PriceBars
+        .Where(p => p.StockId == stock.Id && p.Interval == PriceInterval.Daily)
+        .OrderBy(p => p.BarTime)
+        .ToListAsync();
+
+    var stochasticCalculator = new StochasticOscillatorCalculator();
+    var stochastic = stochasticCalculator.Calculate(priceBars);
+
+    return Results.Ok(new
+    {
+        Symbol = symbol,
+        BarCount = priceBars.Count,
+        stochastic.PercentK,
+        stochastic.PercentD
+    });
+});
+
 app.MapPost("/test-sync/{symbol}", async (string symbol, [FromServices] IPriceDataService priceDataService) =>
 {
     var count = await priceDataService.SyncHistoricalDataAsync(
