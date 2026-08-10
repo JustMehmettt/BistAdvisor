@@ -11,6 +11,7 @@ public class ApplicationDbContext : DbContext
 
     public DbSet<Stock> Stocks => Set<Stock>();
     public DbSet<PriceBar> PriceBars => Set<PriceBar>();
+    public DbSet<IndicatorResult> IndicatorResults => Set<IndicatorResult>();
 
     protected override void OnModelCreating(ModelBuilder modelBuilder)
     {
@@ -41,6 +42,28 @@ public class ApplicationDbContext : DbContext
             entity.HasOne(p => p.Stock)
                 .WithMany(s => s.PriceBars)
                 .HasForeignKey(p => p.StockId)
+                .OnDelete(DeleteBehavior.Cascade);
+        });
+
+        modelBuilder.Entity<IndicatorResult>(entity =>
+        {
+            entity.HasIndex(i => new {i.StockId, i.Interval, i.BarTime}).IsUnique();
+            
+            entity.Property(i => i.RsiValue).HasColumnType("decimal(18,4)");
+            entity.Property(i => i.MacdValue).HasColumnType("decimal(18,4)");
+            entity.Property(i => i.MacdSignalValue).HasColumnType("decimal(18,4)");
+            entity.Property(i => i.MacdHistogramValue).HasColumnType("decimal(18,4)");
+            entity.Property(i => i.Ema20).HasColumnType("decimal(18,4)");
+            entity.Property(i => i.Ema50).HasColumnType("decimal(18,4)");
+            entity.Property(i => i.BollingerUpper).HasColumnType("decimal(18,4)");
+            entity.Property(i => i.BollingerMiddle).HasColumnType("decimal(18,4)");
+            entity.Property(i => i.BollingerLower).HasColumnType("decimal(18,4)");
+            entity.Property(i => i.StochasticK).HasColumnType("decimal(18,4)");
+            entity.Property(i => i.StochasticD).HasColumnType("decimal(18,4)");
+
+            entity.HasOne(i => i.Stock)
+                .WithMany()
+                .HasForeignKey(i => i.StockId)
                 .OnDelete(DeleteBehavior.Cascade);
         });
     }
