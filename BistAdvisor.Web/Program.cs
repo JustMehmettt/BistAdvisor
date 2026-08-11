@@ -175,6 +175,46 @@ app.MapGet("/test-stochastic/{symbol}", async (string symbol, ApplicationDbConte
     });
 });
 
+app.MapGet("/test-signal/{symbol}", async (string symbol, ApplicationDbContext db) =>
+{
+    var stock = await db.Stocks.FirstOrDefaultAsync(s => s.Symbol == symbol);
+    if (stock is null)
+    {
+        return Results.NotFound($"'{symbol}' bulunamadı.");
+    }
+
+    var priceBars = await db.PriceBars
+        .Where(p => p.StockId == stock.Id && p.Interval == PriceInterval.Daily)
+        .OrderBy(p => p.BarTime)
+        .ToListAsync();
+
+    var rsi = new RsiCalculator().Calculate(priceBars);
+    var macd = new MacdCalculator().Calculate(priceBars);
+    var ema = new EmaTrendCalculator().Calculate(priceBars);
+    var bollinger = new BollingerBandsCalculator().Calculate(priceBars);
+    var stochastic = new StochasticOscillatorCalculator().Calculate(priceBars);
+
+    var rsiScore = IndicatorScoreCalculator.ScoreRsi(rsi);
+    var macdScore = IndicatorScoreCalculator.ScoreMacd(macd);
+    var emaScore = IndicatorScoreCalculator.ScoreEmaTrend(ema);
+    var bollingerScore = IndicatorScoreCalculator.ScoreBollinger(bollinger);
+    var stochasticScore = IndicatorScoreCalculator.ScoreStochastic(stochastic);
+    
+    var signal = new SignalCalculator().Calculate(rsiScore, macdScore, emaScore, bollingerScore, stochasticScore);
+    
+    return Results.Ok(new
+    {
+        Symbol = symbol,
+        BarCount = priceBars.Count,
+        Indicators = new { Rsi = rsi, Macd = macd.MacdLine, Ema20 = ema.Ema20, Ema50 = ema.Ema50, BollingerUpper = bollinger.UpperBand, StochasticK = stochastic.PercentK },
+        Scores = new { rsiScore, macdScore, emaScore, bollingerScore, stochasticScore },
+        signal.TotalScore,
+        signal.ConfidenceRate,
+        SignalType = signal.SignalType.ToString()
+    });
+});
+
+
 app.MapPost("/test-sync/{symbol}", async (string symbol, [FromServices] IPriceDataService priceDataService) =>
 {
     var count = await priceDataService.SyncHistoricalDataAsync(
