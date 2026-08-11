@@ -6,6 +6,8 @@ using BistAdvisor.Infrastructure.MarketData;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.AspNetCore.Mvc;
 using BistAdvisor.Domain.Entities;
+using BistAdvisor.Infrastructure.Indicators;
+using SignalType = BistAdvisor.Application.Indicators.SignalType;
 
 var builder = WebApplication.CreateBuilder(args);
 
@@ -17,6 +19,7 @@ builder.Services.AddDbContext<ApplicationDbContext>(options =>
 
 builder.Services.AddScoped<IMarketDataProvider, MockMarketDataProvider>();
 builder.Services.AddScoped<IPriceDataService, PriceDataService>();
+builder.Services.AddScoped<ISignalService, SignalService>();
 
 var app = builder.Build();
 
@@ -223,6 +226,20 @@ app.MapPost("/test-sync/{symbol}", async (string symbol, [FromServices] IPriceDa
         DateTimeOffset.UtcNow);
 
     return Results.Ok(new { InsertedCount = count });
+});
+
+app.MapPost("/test-signal/{symbol}", async (string symbol, ISignalService signalService) =>
+{
+    var snapshot = await signalService.CalculateAndSaveSignalAsync(symbol);
+    
+    return Results.Ok(new
+    {
+        snapshot.Id,
+        snapshot.SignalType,
+        snapshot.TotalScore,
+        snapshot.ConfidenceRate,
+        snapshot.Explanation
+    });
 });
 
 app.Run();

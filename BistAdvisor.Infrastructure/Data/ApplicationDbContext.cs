@@ -12,6 +12,7 @@ public class ApplicationDbContext : DbContext
     public DbSet<Stock> Stocks => Set<Stock>();
     public DbSet<PriceBar> PriceBars => Set<PriceBar>();
     public DbSet<IndicatorResult> IndicatorResults => Set<IndicatorResult>();
+    public DbSet<SignalSnapshot> SignalSnapshots => Set<SignalSnapshot>();
 
     protected override void OnModelCreating(ModelBuilder modelBuilder)
     {
@@ -66,5 +67,18 @@ public class ApplicationDbContext : DbContext
                 .HasForeignKey(i => i.StockId)
                 .OnDelete(DeleteBehavior.Cascade);
         });
+        
+        modelBuilder.Entity<SignalSnapshot>(entity =>
+        {
+            entity.Property(s => s.TotalScore).HasColumnType("decimal(6,2)");
+            entity.Property(s => s.ConfidenceRate).HasColumnType("decimal(5,2)");
+            entity.Property(s => s.AlgorithmVersion).HasMaxLength(20).IsRequired();
+
+            entity.HasOne(s => s.Stock)
+                .WithMany()
+                .HasForeignKey(s => s.StockId)
+                .OnDelete(DeleteBehavior.Cascade);
+        });
+        
     }
 }
