@@ -7,6 +7,9 @@ public class MacdResult
     public decimal? MacdLine { get; set; }
     public decimal? SignalLine { get; set; }
     public decimal? Histogram { get; set; }
+    public bool BullishCrossover { get; set; }
+    public bool BearishCrossover { get; set; }
+    public bool HistogramStrengthening { get; set; }
 }
 
 public class MacdCalculator
@@ -50,12 +53,32 @@ public class MacdCalculator
          var macdLine = macdLineSeries[^1];
          var signalLine = signalSeries[^1];
          var histogram = macdLine - signalLine;
+
+         var bullishCrossover = false;
+         var bearishCrossover = false;
+         var histogramStrengthening = false;
+
+         if (signalSeries.Count >= 2 && macdLineSeries.Count >= 2)
+         {
+             var previousMacd = macdLineSeries[^2];
+             var previousSignal = signalSeries[^2];
+             var previousHistogram = previousMacd - previousSignal;
+             
+             bullishCrossover = previousMacd <= previousSignal && macdLine > signalLine;
+             bearishCrossover = previousMacd >= previousSignal && macdLine < signalLine;
+             histogramStrengthening = Math.Abs(histogram) > Math.Abs(previousHistogram);
+         }
+         
+         
          
          return new MacdResult
          {
              MacdLine = Math.Round(macdLine, 4),
              SignalLine = Math.Round(signalLine, 4),
-             Histogram = Math.Round(histogram, 4)
+             Histogram = Math.Round(histogram, 4),
+             BullishCrossover = bullishCrossover,
+             BearishCrossover = bearishCrossover,
+             HistogramStrengthening = histogramStrengthening
          };
      }
 }
