@@ -26,6 +26,11 @@ public class SignalService : ISignalService
         {
             throw new InvalidOperationException($"'{stockSymbol}' sembollü hisse veritabanında bulunamadı.");
         }
+        
+        var previousSnapshot = await _context.SignalSnapshots
+            .Where(s => s.StockId == stock.Id)
+            .OrderByDescending(s => s.CreatedAt)
+            .FirstOrDefaultAsync(cancellationToken);
 
         var priceBars = await _context.PriceBars
             .Where(p => p.StockId == stock.Id && p.Interval == PriceInterval.Daily)
@@ -44,11 +49,11 @@ public class SignalService : ISignalService
         var bollingerScore = IndicatorScoreCalculator.ScoreBollinger(bollinger);
         var stochasticScore = IndicatorScoreCalculator.ScoreStochastic(stochastic);
 
-        var signal = new SignalCalculator().Calculate(
-            rsiScore, macdScore, emaScore, bollingerScore, stochasticScore);
-
+        var signal = new SignalCalculator().Calculate(rsiScore, macdScore, emaScore, bollingerScore, stochasticScore);
+        
         var now = DateTimeOffset.UtcNow;
         var latestBarTime = priceBars.Count > 0 ? priceBars[^1].BarTime : now;
+        var newSignalType = MapSignalType(signal.SignalType);
 
         var snapshot = new SignalSnapshot
         {
@@ -62,13 +67,33 @@ public class SignalService : ISignalService
             StochasticScore = signal.StochasticScore,
             TotalScore = signal.TotalScore,
             ConfidenceRate = signal.ConfidenceRate,
-            SignalType = MapSignalType(signal.SignalType),
+            SignalType = newSignalType,
             Explanation = BuildExplanation(stockSymbol, signal, rsi, macd, ema),
             AlgorithmVersion = "v1.0",
             CreatedAt = now
         };
 
         _context.SignalSnapshots.Add(snapshot);
+
+        if (previousSnapshot is not null && previousSnapshot.SignalType != newSignalType)
+        {
+            var change = new SignalChange
+            {
+                StockId = stock.Id,
+                PreviousSignalType = previousSnapshot.SignalType,
+                NewSignalType = newSignalType,
+                PreviousScore = previousSnapshot.TotalScore,
+                NewScore = signal.TotalScore,
+                PreviousConfidenceRate = previousSnapshot.ConfidenceRate,
+                NewConfidenceRate = signal.ConfidenceRate,
+                ChangeTime = now,
+                ChangeReason = $"Signal changed from {previousSnapshot.SignalType} to {newSignalType}.",
+                AlgorithmVersion = "v1.0",
+                CreatedAt = now
+            };
+            
+            _context.SignalChanges.Add(change);
+        }
         await _context.SaveChangesAsync(cancellationToken);
 
         return snapshot;

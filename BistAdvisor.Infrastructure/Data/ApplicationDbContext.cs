@@ -13,7 +13,7 @@ public class ApplicationDbContext : DbContext
     public DbSet<PriceBar> PriceBars => Set<PriceBar>();
     public DbSet<IndicatorResult> IndicatorResults => Set<IndicatorResult>();
     public DbSet<SignalSnapshot> SignalSnapshots => Set<SignalSnapshot>();
-
+    public DbSet<SignalChange> SignalChanges => Set<SignalChange>();
     protected override void OnModelCreating(ModelBuilder modelBuilder)
     {
         base.OnModelCreating(modelBuilder);
@@ -72,6 +72,20 @@ public class ApplicationDbContext : DbContext
         {
             entity.Property(s => s.TotalScore).HasColumnType("decimal(6,2)");
             entity.Property(s => s.ConfidenceRate).HasColumnType("decimal(5,2)");
+            entity.Property(s => s.AlgorithmVersion).HasMaxLength(20).IsRequired();
+
+            entity.HasOne(s => s.Stock)
+                .WithMany()
+                .HasForeignKey(s => s.StockId)
+                .OnDelete(DeleteBehavior.Cascade);
+        });
+        
+        modelBuilder.Entity<SignalChange>(entity =>
+        {
+            entity.Property(s => s.PreviousScore).HasColumnType("decimal(6,2)");
+            entity.Property(s => s.NewScore).HasColumnType("decimal(6,2)");
+            entity.Property(s => s.PreviousConfidenceRate).HasColumnType("decimal(5,2)");
+            entity.Property(s => s.NewConfidenceRate).HasColumnType("decimal(5,2)");
             entity.Property(s => s.AlgorithmVersion).HasMaxLength(20).IsRequired();
 
             entity.HasOne(s => s.Stock)
