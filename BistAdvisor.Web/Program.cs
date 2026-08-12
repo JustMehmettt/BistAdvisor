@@ -1,13 +1,11 @@
-using System.Linq.Expressions;
+using BistAdvisor.Application.Dtos;
 using BistAdvisor.Application.Indicators;
 using BistAdvisor.Application.MarketData;
 using BistAdvisor.Infrastructure.Data;
 using BistAdvisor.Infrastructure.MarketData;
 using Microsoft.EntityFrameworkCore;
-using Microsoft.AspNetCore.Mvc;
-using BistAdvisor.Domain.Entities;
 using BistAdvisor.Infrastructure.Indicators;
-using SignalType = BistAdvisor.Application.Indicators.SignalType;
+using DomainSignalType = BistAdvisor.Domain.Entities.SignalType;
 
 var builder = WebApplication.CreateBuilder(args);
 
@@ -37,208 +35,140 @@ if (app.Environment.IsDevelopment())
 
 app.UseHttpsRedirection();
 
-app.MapGet("/test-yahoo", async (IMarketDataProvider provider) =>
+app.MapGet("/api/stocks", async (ApplicationDbContext db, int page = 1, int pageSize = 20, string? sector = null) =>
 {
-    var isAvailable = await provider.IsAvailableAsync();
-    if (!isAvailable)
+    var query = db.Stocks.Where(s => s.IsActive).AsQueryable();
+
+    if (!string.IsNullOrWhiteSpace(sector))
     {
-        return Results.Problem("Yahoo Finance şu anda erişilebilir değil.");
+        query = query.Where(s => s.Sector == sector);
     }
+    var totalCount = await query.CountAsync();
 
-    var data = await provider.GetHistoricalDataAsync(
-        "THYAO.IS",
-        DateTimeOffset.UtcNow.AddDays(-10),
-        DateTimeOffset.UtcNow);
-
-    return Results.Ok(data);
-});
-
-app.MapGet("test-rsi/{symbol}", async (string symbol, ApplicationDbContext db) =>
-{
-    var stock = await db.Stocks.FirstOrDefaultAsync(s => s.Symbol == symbol);
-    if (stock == null)
-    {
-        return Results.NotFound($"'{symbol}' stock not found.");
-    }
-
-    var priceBars = await db.PriceBars
-        .Where(p => p.StockId == stock.Id && p.Interval == PriceInterval.Daily)
-        .OrderBy(p => p.BarTime)
-        .ToListAsync();
-
-    var rsiCalculator = new RsiCalculator();
-    var rsi = rsiCalculator.Calculate(priceBars);
-
-    return Results.Ok(new { Symbol = symbol, BarCount = priceBars.Count, Rsi = rsi });
-});
-
-app.MapGet("/test-macd/{symbol}", async (string symbol, ApplicationDbContext db) =>
-{
-    var stock = await db.Stocks.FirstOrDefaultAsync(s => s.Symbol == symbol);
-    if (stock is null)
-    {
-        return Results.NotFound($"'{symbol}' stock not found.");
-    }
-    
-    var priceBars = await db.PriceBars
-        .Where(p => p.StockId == stock.Id && p.Interval == PriceInterval.Daily)
-        .OrderBy(p => p.BarTime)
+    var stocks = await query
+        .OrderBy(s => s.Symbol)
+        .Skip((page - 1) * pageSize)
+        .Take(pageSize)
+        .Select(s => new StockDto
+        {
+            Id = s.Id,
+            Symbol = s.Symbol,
+            CompanyName = s.CompanyName,
+            Sector = s.Sector,
+            IsActive = s.IsActive
+        })
         .ToListAsync();
     
-    var macdCalculator = new MacdCalculator();
-    var macd = macdCalculator.Calculate(priceBars);
-    
-    return Results.Ok(new
+    return Results.Ok(new PagedResult<StockDto>
     {
-        Symbol = symbol, 
-        BarCount = priceBars.Count,
-        macd.MacdLine,
-        macd.SignalLine,
-        macd.Histogram
+        Items = stocks,
+        Page = page,
+        PageSize = pageSize,
+        TotalCount = totalCount
     });
 });
 
-app.MapGet("/test-ema/{symbol}", async (string symbol, ApplicationDbContext db) =>
+app.MapGet("/api/stocks/{symbol}", async (string symbol, ApplicationDbContext db) =>
 {
     var stock = await db.Stocks.FirstOrDefaultAsync(s => s.Symbol == symbol);
+
     if (stock is null)
     {
-        return Results.NotFound($"'{symbol}' stock not found.");
+        return Results.NotFound(new { Message = $"Stock '{symbol}' not found." });
     }
 
-    var priceBars = await db.PriceBars
-        .Where(p => p.StockId == stock.Id && p.Interval == PriceInterval.Daily)
-        .OrderBy(p => p.BarTime)
-        .ToListAsync();
-
-    var emaCalculator = new EmaTrendCalculator();
-    var emaTrend = emaCalculator.Calculate(priceBars);
-
-    return Results.Ok(new
+    return Results.Ok(new StockDto
     {
-        Symbol = symbol, 
-        BarCount = priceBars.Count,
-        emaTrend.CurrentPrice,
-        emaTrend.Ema20,
-        emaTrend.Ema50,
-        emaTrend.GoldenCross,
-        emaTrend.DeathCross
+        Id = stock.Id,
+        Symbol = stock.Symbol,
+        CompanyName = stock.CompanyName,
+        Sector = stock.Sector,
+        IsActive = stock.IsActive
     });
 });
 
-app.MapGet("/test-bollinger/{symbol}", async (string symbol, ApplicationDbContext db) =>
+app.MapGet("/api/stocks/{symbol}/signals", async (string symbol, ApplicationDbContext db, int page = 1, int pageSize = 20) =>
 {
     var stock = await db.Stocks.FirstOrDefaultAsync(s => s.Symbol == symbol);
+
     if (stock is null)
     {
-        return Results.NotFound($"'{symbol}' stock not found.");
+        return Results.NotFound(new { Message = $"Stock '{symbol}' not found." });
     }
-    
-    var priceBars = await db.PriceBars
-        .Where(p => p.StockId == stock.Id && p.Interval == PriceInterval.Daily)
-        .OrderBy(p => p.BarTime)
+
+    var query = db.SignalSnapshots.Where(s => s.StockId == stock.Id);
+    var totalCount = await query.CountAsync();
+
+    var signals = await query
+        .OrderByDescending(s => s.CreatedAt)
+        .Skip((page - 1) * pageSize)
+        .Take(pageSize)
+        .Select(s => new SignalDto
+        {
+            Symbol = stock.Symbol,
+            CompanyName = stock.CompanyName,
+            SignalType = s.SignalType.ToString(),
+            TotalScore = s.TotalScore,
+            ConfidenceRate = s.ConfidenceRate,
+            Explanation = s.Explanation,
+            CreatedAt = s.CreatedAt
+        })
         .ToListAsync();
 
-    var bollingerCalculator = new BollingerBandsCalculator();
-    var bollinger = bollingerCalculator.Calculate(priceBars);
-
-    return Results.Ok(new
+    return Results.Ok(new PagedResult<SignalDto>
     {
-        Symbol = symbol,
-        BarCount = priceBars.Count,
-        bollinger.CurrentPrice,
-        bollinger.UpperBand,
-        bollinger.MiddleBand,
-        bollinger.LowerBand,
+        Items = signals,
+        Page = page,
+        PageSize = pageSize,
+        TotalCount = totalCount
     });
 });
 
-app.MapGet("/test-stochastic/{symbol}", async (string symbol, ApplicationDbContext db) =>
+app.MapGet("/api/signals/latest", async (ApplicationDbContext db, string? signalType = null, int page = 1, int pageSize = 20) =>
 {
-    var stock = await db.Stocks.FirstOrDefaultAsync(s => s.Symbol == symbol);
-    if (stock is null)
+    var latestTimestamps = db.SignalSnapshots
+        .GroupBy(s => s.StockId)
+        .Select(g => new { StockId = g.Key, MaxCreatedAt = g.Max(s => s.CreatedAt) });
+
+    var latestSignals = db.SignalSnapshots
+        .Join(latestTimestamps,
+            s => new { s.StockId, s.CreatedAt },
+            t => new { t.StockId, CreatedAt = t.MaxCreatedAt },
+            (s, t) => s);
+
+    if (!string.IsNullOrWhiteSpace(signalType) &&
+        Enum.TryParse<DomainSignalType>(signalType, true, out var parsedType))
     {
-        return Results.NotFound($"'{symbol}' bulunamadı.");
+        latestSignals = latestSignals.Where(s => s.SignalType == parsedType);
     }
 
-    var priceBars = await db.PriceBars
-        .Where(p => p.StockId == stock.Id && p.Interval == PriceInterval.Daily)
-        .OrderBy(p => p.BarTime)
+    var joined = latestSignals
+        .Join(db.Stocks, s => s.StockId, st => st.Id, (s, st) => new { Signal = s, Stock = st });
+
+    var totalCount = await joined.CountAsync();
+
+    var results = await joined
+        .OrderByDescending(x => x.Signal.CreatedAt)
+        .Skip((page - 1) * pageSize)
+        .Take(pageSize)
+        .Select(x => new SignalDto
+        {
+            Symbol = x.Stock.Symbol,
+            CompanyName = x.Stock.CompanyName,
+            SignalType = x.Signal.SignalType.ToString(),
+            TotalScore = x.Signal.TotalScore,
+            ConfidenceRate = x.Signal.ConfidenceRate,
+            Explanation = x.Signal.Explanation,
+            CreatedAt = x.Signal.CreatedAt
+        })
         .ToListAsync();
 
-    var stochasticCalculator = new StochasticOscillatorCalculator();
-    var stochastic = stochasticCalculator.Calculate(priceBars);
-
-    return Results.Ok(new
+    return Results.Ok(new PagedResult<SignalDto>
     {
-        Symbol = symbol,
-        BarCount = priceBars.Count,
-        stochastic.PercentK,
-        stochastic.PercentD
-    });
-});
-
-app.MapGet("/test-signal/{symbol}", async (string symbol, ApplicationDbContext db) =>
-{
-    var stock = await db.Stocks.FirstOrDefaultAsync(s => s.Symbol == symbol);
-    if (stock is null)
-    {
-        return Results.NotFound($"'{symbol}' bulunamadı.");
-    }
-
-    var priceBars = await db.PriceBars
-        .Where(p => p.StockId == stock.Id && p.Interval == PriceInterval.Daily)
-        .OrderBy(p => p.BarTime)
-        .ToListAsync();
-
-    var rsi = new RsiCalculator().Calculate(priceBars);
-    var macd = new MacdCalculator().Calculate(priceBars);
-    var ema = new EmaTrendCalculator().Calculate(priceBars);
-    var bollinger = new BollingerBandsCalculator().Calculate(priceBars);
-    var stochastic = new StochasticOscillatorCalculator().Calculate(priceBars);
-
-    var rsiScore = IndicatorScoreCalculator.ScoreRsi(rsi);
-    var macdScore = IndicatorScoreCalculator.ScoreMacd(macd);
-    var emaScore = IndicatorScoreCalculator.ScoreEmaTrend(ema);
-    var bollingerScore = IndicatorScoreCalculator.ScoreBollinger(bollinger);
-    var stochasticScore = IndicatorScoreCalculator.ScoreStochastic(stochastic);
-    
-    var signal = new SignalCalculator().Calculate(rsiScore, macdScore, emaScore, bollingerScore, stochasticScore);
-    
-    return Results.Ok(new
-    {
-        Symbol = symbol,
-        BarCount = priceBars.Count,
-        Indicators = new { Rsi = rsi, Macd = macd.MacdLine, Ema20 = ema.Ema20, Ema50 = ema.Ema50, BollingerUpper = bollinger.UpperBand, StochasticK = stochastic.PercentK },
-        Scores = new { rsiScore, macdScore, emaScore, bollingerScore, stochasticScore },
-        signal.TotalScore,
-        signal.ConfidenceRate,
-        SignalType = signal.SignalType.ToString()
-    });
-});
-
-
-app.MapPost("/test-sync/{symbol}", async (string symbol, [FromServices] IPriceDataService priceDataService) =>
-{
-    var count = await priceDataService.SyncHistoricalDataAsync(
-        symbol,
-        DateTimeOffset.UtcNow.AddDays(-90),
-        DateTimeOffset.UtcNow);
-
-    return Results.Ok(new { InsertedCount = count });
-});
-
-app.MapPost("/test-signal/{symbol}", async (string symbol, ISignalService signalService) =>
-{
-    var snapshot = await signalService.CalculateAndSaveSignalAsync(symbol);
-    
-    return Results.Ok(new
-    {
-        snapshot.Id,
-        snapshot.SignalType,
-        snapshot.TotalScore,
-        snapshot.ConfidenceRate,
-        snapshot.Explanation
+        Items = results,
+        Page = page,
+        PageSize = pageSize,
+        TotalCount = totalCount
     });
 });
 
