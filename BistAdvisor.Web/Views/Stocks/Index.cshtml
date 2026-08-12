@@ -1,0 +1,81 @@
+﻿@using BistAdvisor.Application.Dtos
+@model List<StockListItemDto>
+
+@{
+    ViewData["Title"] = "Hisseler";
+    var sectors = ViewData["Sectors"] as List<string?> ?? new List<string?>();
+}
+
+<h1 class="mb-4">Hisse Listesi</h1>
+
+<form method="get" class="row g-2 mb-4">
+    <div class="col-md-3">
+        <input type="text" name="search" class="form-control" placeholder="Hisse kodu veya şirket ara..."
+               value="@ViewData["CurrentSearch"]" />
+    </div>
+    <div class="col-md-3">
+        <select name="sector" class="form-select">
+            <option value="">Tüm Sektörler</option>
+            @foreach (var sector in sectors)
+            {
+                <option value="@sector" selected="@(sector == ViewData["CurrentSector"]?.ToString())">@sector</option>
+            }
+        </select>
+    </div>
+    <div class="col-md-3">
+        <select name="signalType" class="form-select">
+            <option value="">Tüm Sinyaller</option>
+            <option value="StrongBuy" selected="@("StrongBuy" == ViewData["CurrentSignalType"]?.ToString())">Güçlü Al</option>
+            <option value="Buy" selected="@("Buy" == ViewData["CurrentSignalType"]?.ToString())">Al</option>
+            <option value="Neutral" selected="@("Neutral" == ViewData["CurrentSignalType"]?.ToString())">Nötr</option>
+            <option value="Sell" selected="@("Sell" == ViewData["CurrentSignalType"]?.ToString())">Sat</option>
+            <option value="StrongSell" selected="@("StrongSell" == ViewData["CurrentSignalType"]?.ToString())">Güçlü Sat</option>
+        </select>
+    </div>
+    <div class="col-md-2">
+        <input type="number" name="minScore" class="form-control" placeholder="Min. Skor"
+               value="@ViewData["CurrentMinScore"]" />
+    </div>
+    <div class="col-md-1">
+        <button type="submit" class="btn btn-primary w-100">Filtrele</button>
+    </div>
+</form>
+
+<table class="table table-hover align-middle">
+    <thead>
+        <tr>
+            <th>Hisse</th>
+            <th>Şirket</th>
+            <th>Sektör</th>
+            <th>Son Fiyat</th>
+            <th>Skor</th>
+            <th>Güven Oranı</th>
+            <th>Sinyal</th>
+            <th>Son Güncelleme</th>
+        </tr>
+    </thead>
+    <tbody>
+        @foreach (var stock in Model)
+        {
+            var badgeClass = stock.SignalType switch
+            {
+                "StrongBuy" => "bg-success",
+                "Buy" => "bg-success-subtle text-success",
+                "Sell" => "bg-danger-subtle text-danger",
+                "StrongSell" => "bg-danger",
+                _ => "bg-secondary-subtle text-secondary"
+            };
+
+            <tr>
+                <td><strong>@stock.Symbol</strong></td>
+                <td>@stock.CompanyName</td>
+                <td>@stock.Sector</td>
+                <td>@(stock.LastPrice?.ToString("F2") ?? "-")</td>
+                <td>@(stock.TotalScore?.ToString("F2") ?? "-")</td>
+                <td>@(stock.ConfidenceRate?.ToString("F1") + "%")</td>
+                <td><span class="badge @badgeClass">@stock.SignalType</span></td>
+                <td>@(stock.LastUpdate?.ToLocalTime().ToString("dd.MM.yyyy HH:mm") ?? "-")</td>
+            </tr>
+        }
+    </tbody>
+</table>
