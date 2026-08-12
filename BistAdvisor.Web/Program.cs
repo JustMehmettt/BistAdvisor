@@ -10,6 +10,7 @@ using DomainSignalType = BistAdvisor.Domain.Entities.SignalType;
 var builder = WebApplication.CreateBuilder(args);
 
 builder.Services.AddEndpointsApiExplorer();
+builder.Services.AddControllersWithViews();
 builder.Services.AddSwaggerGen();
 
 builder.Services.AddDbContext<ApplicationDbContext>(options =>
@@ -34,6 +35,12 @@ if (app.Environment.IsDevelopment())
 }
 
 app.UseHttpsRedirection();
+app.UseStaticFiles();
+app.UseRouting();
+
+app.MapControllerRoute(
+    name: "default",
+    pattern: "{controller=Dashboard}/{action=Index}/{id?}");
 
 app.MapGet("/api/stocks", async (ApplicationDbContext db, int page = 1, int pageSize = 20, string? sector = null) =>
 {

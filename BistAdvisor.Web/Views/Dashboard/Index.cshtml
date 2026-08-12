@@ -1,0 +1,68 @@
+﻿@{
+    ViewData["Title"] = "Dashboard";
+}
+
+<h1 class="mb-4">Teknik Analiz Dashboard</h1>
+
+<div class="row g-3 mb-4">
+    <div class="col-md-2">
+        <div class="card text-center">
+            <div class="card-body">
+                <h6 class="text-muted">Toplam Hisse</h6>
+                <h3>@ViewData["TotalStocks"]</h3>
+            </div>
+        </div>
+    </div>
+    <div class="col-md-2">
+        <div class="card text-center border-success">
+            <div class="card-body">
+                <h6 class="text-muted">Güçlü Al</h6>
+                <h3 class="text-success">@ViewData["StrongBuyCount"]</h3>
+            </div>
+        </div>
+    </div>
+    <div class="col-md-2">
+        <div class="card text-center border-success">
+            <div class="card-body">
+                <h6 class="text-muted">Al</h6>
+                <h3 class="text-success">@ViewData["BuyCount"]</h3>
+            </div>
+        </div>
+    </div>
+    <div class="col-md-2">
+        <div class="card text-center">
+            <div class="card-body">
+                <h6 class="text-muted">Nötr</h6>
+                <h3>@ViewData["NeutralCount"]</h3>
+            </div>
+        </div>
+    </div>
+    <div class="col-md-2">
+        <div class="card text-center border-danger">
+            <div class="card-body">
+                <h6 class="text-muted">Sat</h6>
+                <h3 class="text-danger">@ViewData["SellCount"]</h3>
+            </div>
+        </div>
+    </div>
+    <div class="col-md-2">
+        <div class="card text-center border-danger">
+            <div class="card-body">
+                <h6 class="text-muted">Güçlü Sat</h6>
+                <h3 class="text-danger">@ViewData["StrongSellCount"]</h3>
+            </div>
+        </div>
+    </div>
+</div>
+
+<p class="text-muted">
+    Son güncelleme:
+    @if (ViewData["LastUpdate"] is DateTimeOffset lastUpdate)
+    {
+        @lastUpdate.ToLocalTime().ToString("dd.MM.yyyy HH:mm")
+    }
+    else
+    {
+        @:Henüz veri yok
+    }
+</p>
