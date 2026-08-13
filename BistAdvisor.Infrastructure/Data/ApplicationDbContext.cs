@@ -14,6 +14,9 @@ public class ApplicationDbContext : DbContext
     public DbSet<IndicatorResult> IndicatorResults => Set<IndicatorResult>();
     public DbSet<SignalSnapshot> SignalSnapshots => Set<SignalSnapshot>();
     public DbSet<SignalChange> SignalChanges => Set<SignalChange>();
+    public DbSet<DailyBulletin>  DailyBulletins => Set<DailyBulletin>();
+    public DbSet<BulletinItem> BulletinItems => Set<BulletinItem>();
+    
     protected override void OnModelCreating(ModelBuilder modelBuilder)
     {
         base.OnModelCreating(modelBuilder);
@@ -93,6 +96,30 @@ public class ApplicationDbContext : DbContext
                 .HasForeignKey(s => s.StockId)
                 .OnDelete(DeleteBehavior.Cascade);
         });
-        
+
+        modelBuilder.Entity<DailyBulletin>(entity =>
+        {
+            entity.Property(b => b.Title).HasMaxLength(200).IsRequired();
+            entity.Property(b => b.AlgorithmVersion).HasMaxLength(20).IsRequired();
+        });
+
+        modelBuilder.Entity<BulletinItem>(entity =>
+        {
+            entity.Property(i => i.TotalScore).HasColumnType("decimal(6,2)");
+            entity.Property(i => i.ConfidenceRate).HasColumnType("decimal(5,2)");
+            entity.Property(i => i.LastPrice).HasColumnType("decimal(18,4)");
+            entity.Property(i => i.DailyChangeRate).HasColumnType("decimal(8,4)");
+
+            entity.HasOne(i => i.Bulletin)
+                .WithMany(b => b.Items)
+                .HasForeignKey(i => i.BulletinId)
+                .OnDelete(DeleteBehavior.Cascade);
+
+            entity.HasOne(i => i.Stock)
+                .WithMany()
+                .HasForeignKey(i => i.StockId)
+                .OnDelete(DeleteBehavior.Restrict);
+        });
+
     }
 }
