@@ -6,6 +6,7 @@ using Microsoft.EntityFrameworkCore;
 
 namespace BistAdvisor.Web.Controllers;
 
+[ApiExplorerSettings(IgnoreApi = true)]
 public class StocksController : Controller
 {
     private readonly ApplicationDbContext _context;
@@ -95,7 +96,9 @@ public class StocksController : Controller
 
         return View(results);
     }
-[Route("/stocks/Detail/{symbol}")]
+
+    [HttpGet]
+    [Route("/stocks/Detail/{symbol}")]
     public async Task<IActionResult> Detail(string symbol)
     {
         var stock = await _context.Stocks.FirstOrDefaultAsync(s => s.Symbol == symbol);
@@ -141,7 +144,7 @@ public class StocksController : Controller
                 })
                 .ToList()
         };
-        
+
         return View(detail);
     }
 }

@@ -6,6 +6,7 @@ using BistAdvisor.Infrastructure.MarketData;
 using Microsoft.EntityFrameworkCore;
 using BistAdvisor.Infrastructure.Indicators;
 using DomainSignalType = BistAdvisor.Domain.Entities.SignalType;
+using Microsoft.AspNetCore.Mvc;
 
 var builder = WebApplication.CreateBuilder(args);
 

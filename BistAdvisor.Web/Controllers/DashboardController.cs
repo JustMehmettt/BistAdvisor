@@ -4,6 +4,7 @@ using Microsoft.EntityFrameworkCore;
 
 namespace BistAdvisor.Web.Controllers;
 
+[ApiExplorerSettings(IgnoreApi = true)]
 public class DashboardController : Controller
 {
     private readonly ApplicationDbContext _context;
