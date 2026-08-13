@@ -1,0 +1,120 @@
+﻿@using BistAdvisor.Application.Dtos
+@model StockDetailDto
+
+@{
+    ViewData["Title"] = $"{Model.Symbol} - Detay";
+
+    var badgeClass = Model.SignalType switch
+    {
+        "StrongBuy" => "bg-success",
+        "Buy" => "bg-success-subtle text-success",
+        "Sell" => "bg-danger-subtle text-danger",
+        "StrongSell" => "bg-danger",
+        _ => "bg-secondary-subtle text-secondary"
+    };
+}
+
+<div class="d-flex justify-content-between align-items-start mb-4">
+    <div>
+        <h1>@Model.Symbol <small class="text-muted fs-4">@Model.CompanyName</small></h1>
+        <span class="badge bg-light text-dark">@Model.Sector</span>
+    </div>
+    <span class="badge @badgeClass fs-5">@Model.SignalType</span>
+</div>
+
+<div class="row g-3 mb-4">
+    <div class="col-md-3">
+        <div class="card text-center">
+            <div class="card-body">
+                <h6 class="text-muted">Son Fiyat</h6>
+                <h3>@(Model.LastPrice?.ToString("F2") ?? "-")</h3>
+            </div>
+        </div>
+    </div>
+    <div class="col-md-3">
+        <div class="card text-center">
+            <div class="card-body">
+                <h6 class="text-muted">Teknik Skor</h6>
+                <h3>@(Model.TotalScore?.ToString("F2") ?? "-")</h3>
+            </div>
+        </div>
+    </div>
+    <div class="col-md-3">
+        <div class="card text-center">
+            <div class="card-body">
+                <h6 class="text-muted">Güven Oranı</h6>
+                <h3>@(Model.ConfidenceRate?.ToString("F1") + "%")</h3>
+            </div>
+        </div>
+    </div>
+    <div class="col-md-3">
+        <div class="card text-center">
+            <div class="card-body">
+                <h6 class="text-muted">Son Güncelleme</h6>
+                <h6 class="mt-2">@(Model.LastUpdate?.ToLocalTime().ToString("dd.MM.yyyy HH:mm") ?? "-")</h6>
+            </div>
+        </div>
+    </div>
+</div>
+
+@if (!string.IsNullOrWhiteSpace(Model.Explanation))
+{
+    <div class="alert alert-light border">
+        <strong>Sinyal Gerekçesi:</strong> @Model.Explanation
+    </div>
+}
+
+<h4 class="mt-4">Fiyat Grafiği</h4>
+<canvas id="priceChart" height="80"></canvas>
+
+<h4 class="mt-5">Sinyal Geçmişi</h4>
+<table class="table table-sm">
+    <thead>
+        <tr>
+            <th>Tarih</th>
+            <th>Sinyal</th>
+            <th>Skor</th>
+        </tr>
+    </thead>
+    <tbody>
+        @foreach (var item in Model.SignalHistory)
+        {
+            <tr>
+                <td>@item.Date.ToLocalTime().ToString("dd.MM.yyyy HH:mm")</td>
+                <td>@item.SignalType</td>
+                <td>@(item.TotalScore?.ToString("F2") ?? "-")</td>
+            </tr>
+        }
+    </tbody>
+</table>
+
+@section Scripts {
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.5.0/chart.umd.min.js"></script>
+    <script>
+        const priceLabels = @Html.Raw(System.Text.Json.JsonSerializer.Serialize(
+            Model.PriceHistory.Select(p => p.Date.ToString("dd.MM"))));
+        const priceData = @Html.Raw(System.Text.Json.JsonSerializer.Serialize(
+            Model.PriceHistory.Select(p => p.Close)));
+
+        new Chart(document.getElementById('priceChart'), {
+            type: 'line',
+            data: {
+                labels: priceLabels,
+                datasets: [{
+                    label: '@Model.Symbol Kapanış Fiyatı',
+                    data: priceData,
+                    borderColor: '#0d6efd',
+                    backgroundColor: 'rgba(13, 110, 253, 0.1)',
+                    fill: true,
+                    tension: 0.2,
+                    pointRadius: 0
+                }]
+            },
+            options: {
+                responsive: true,
+                plugins: { legend: { display: false } },
+                scales: { y: { beginAtZero: false } }
+            }
+        });
+    </script>
+}

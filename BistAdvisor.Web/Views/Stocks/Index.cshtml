@@ -67,7 +67,7 @@
             };
 
             <tr>
-                <td><strong>@stock.Symbol</strong></td>
+                <td><a href="/Stocks/Detail/@stock.Symbol"><strong>@stock.Symbol</strong></a></td>
                 <td>@stock.CompanyName</td>
                 <td>@stock.Sector</td>
                 <td>@(stock.LastPrice?.ToString("F2") ?? "-")</td>

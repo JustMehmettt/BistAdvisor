@@ -95,4 +95,53 @@ public class StocksController : Controller
 
         return View(results);
     }
+[Route("/stocks/Detail/{symbol}")]
+    public async Task<IActionResult> Detail(string symbol)
+    {
+        var stock = await _context.Stocks.FirstOrDefaultAsync(s => s.Symbol == symbol);
+
+        if (stock is null)
+        {
+            return NotFound();
+        }
+
+        var priceBars = await _context.PriceBars
+            .Where(p => p.StockId == stock.Id && p.Interval == PriceInterval.Daily)
+            .OrderBy(p => p.BarTime)
+            .ToListAsync();
+
+        var signalSnapshots = await _context.SignalSnapshots
+            .Where(s => s.StockId == stock.Id)
+            .OrderByDescending(s => s.CreatedAt)
+            .Take(20)
+            .ToListAsync();
+
+        var latestSignal = signalSnapshots.FirstOrDefault();
+
+        var detail = new StockDetailDto
+        {
+            Symbol = stock.Symbol,
+            CompanyName = stock.CompanyName,
+            Sector = stock.Sector,
+            LastPrice = priceBars.Count > 0 ? priceBars[^1].ClosePrice : null,
+            SignalType = latestSignal?.SignalType.ToString() ?? "InsufficientData",
+            TotalScore = latestSignal?.TotalScore,
+            ConfidenceRate = latestSignal?.ConfidenceRate,
+            Explanation = latestSignal?.Explanation,
+            LastUpdate = latestSignal?.CreatedAt,
+            PriceHistory = priceBars
+                .Select(p => new PricePointDto { Date = p.BarTime, Close = p.ClosePrice })
+                .ToList(),
+            SignalHistory = signalSnapshots
+                .Select(s => new SignalHistoryItemDto
+                {
+                    Date = s.CreatedAt,
+                    SignalType = s.SignalType.ToString(),
+                    TotalScore = s.TotalScore
+                })
+                .ToList()
+        };
+        
+        return View(detail);
+    }
 }
