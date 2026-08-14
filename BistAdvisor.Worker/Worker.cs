@@ -1,5 +1,6 @@
 using BistAdvisor.Application.MarketData;
 using BistAdvisor.Application.Indicators;
+using BistAdvisor.Domain.Entities;
 using BistAdvisor.Infrastructure.Data;
 using Microsoft.EntityFrameworkCore;
 
@@ -44,9 +45,19 @@ public class Worker : BackgroundService
 
         foreach (var stock in activeStocks)
         {
+            var startedAt = DateTimeOffset.UtcNow;
+
+            var log = new DataFetchLog
+            {
+                JobName = "DataSyncAndSignalCalculation",
+                StockId = stock.Id,
+                StartedAt = startedAt,
+                Status = JobStatus.Success
+            };
+            
             try
             {
-                await priceDataService.SyncHistoricalDataAsync(
+                var insertedCount = await priceDataService.SyncHistoricalDataAsync(
                     stock.Symbol,
                     DateTimeOffset.UtcNow.AddDays(-90),
                     DateTimeOffset.UtcNow,
@@ -54,12 +65,26 @@ public class Worker : BackgroundService
                 
                 await signalService.CalculateAndSaveSignalAsync(stock.Symbol, stoppingToken);
                 
+                log.InsertedRowCount = insertedCount;
+                log.Status = JobStatus.Success;
+                log.CompletedAt = DateTimeOffset.UtcNow;
+                
                 _logger.LogInformation("Successfully processed {Symbol}", stock.Symbol);
             }
             catch (Exception ex)
             {
+                log.Status = JobStatus.Failed;
+                log.ErrorMessage = ex.Message;
+                log.CompletedAt = DateTimeOffset.UtcNow;
+                
                 _logger.LogError(ex, "Failed to process {Symbol}, continuing with next stock", stock.Symbol);
             }
+            finally
+            {
+                dbContext.DataFetchLogs.Add(log);
+            }
         }
+        
+        await dbContext.SaveChangesAsync(stoppingToken);
     }
 }

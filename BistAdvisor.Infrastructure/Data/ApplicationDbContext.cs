@@ -16,6 +16,7 @@ public class ApplicationDbContext : DbContext
     public DbSet<SignalChange> SignalChanges => Set<SignalChange>();
     public DbSet<DailyBulletin>  DailyBulletins => Set<DailyBulletin>();
     public DbSet<BulletinItem> BulletinItems => Set<BulletinItem>();
+    public DbSet<DataFetchLog> DataFetchLogs => Set<DataFetchLog>();
     
     protected override void OnModelCreating(ModelBuilder modelBuilder)
     {
@@ -121,5 +122,14 @@ public class ApplicationDbContext : DbContext
                 .OnDelete(DeleteBehavior.Restrict);
         });
 
+        modelBuilder.Entity<DataFetchLog>(entity =>
+        {
+            entity.Property(l => l.JobName).HasMaxLength(100).IsRequired();
+            
+            entity.HasOne(l => l.Stock)
+                .WithMany()
+                .HasForeignKey(l => l.StockId)
+                .OnDelete(DeleteBehavior.SetNull);
+        });
     }
 }
