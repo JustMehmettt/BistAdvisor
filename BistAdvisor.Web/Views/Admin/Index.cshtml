@@ -1,0 +1,127 @@
+﻿@using BistAdvisor.Domain.Entities
+@{
+    ViewData["Title"] = "Yönetim Paneli";
+    var stocks = ViewData["Stocks"] as List<Stock> ?? new List<Stock>();
+    var recentLogs = ViewData["RecentLogs"] as List<DataFetchLog> ?? new List<DataFetchLog>();
+    var failedLogs = ViewData["FailedLogs"] as List<DataFetchLog> ?? new List<DataFetchLog>();
+}
+
+<h1 class="mb-4">Yönetim ve Log Sayfası</h1>
+
+@if (TempData["Message"] is string message)
+{
+    <div class="alert alert-info">@message</div>
+}
+
+<div class="row g-3 mb-4">
+    <div class="col-md-3">
+        <form method="post" asp-action="RunDataSync">
+            <button type="submit" class="btn btn-primary w-100">Veri Toplamayı Şimdi Çalıştır</button>
+        </form>
+    </div>
+    <div class="col-md-3">
+        <form method="post" asp-action="GenerateBulletin">
+            <button type="submit" class="btn btn-success w-100">Bülteni Şimdi Oluştur</button>
+        </form>
+    </div>
+    <div class="col-md-3">
+        <form method="post" asp-action="TestConnection">
+            <button type="submit" class="btn btn-secondary w-100">Veri Kaynağı Bağlantı Testi</button>
+        </form>
+    </div>
+</div>
+
+<h4 class="mt-5">İndikatör Ağırlıkları</h4>
+<table class="table table-sm w-auto">
+    <tbody>
+        <tr><td>MACD</td><td>%25</td></tr>
+        <tr><td>EMA20/EMA50</td><td>%25</td></tr>
+        <tr><td>RSI</td><td>%20</td></tr>
+        <tr><td>Bollinger Bantları</td><td>%15</td></tr>
+        <tr><td>Stochastic Oscillator</td><td>%15</td></tr>
+    </tbody>
+</table>
+
+<h4 class="mt-5">Hisse Yönetimi</h4>
+<table class="table table-sm">
+    <thead>
+        <tr>
+            <th>Kod</th>
+            <th>Şirket</th>
+            <th>Durum</th>
+            <th></th>
+        </tr>
+    </thead>
+    <tbody>
+        @foreach (var stock in stocks)
+        {
+            <tr>
+                <td>@stock.Symbol</td>
+                <td>@stock.CompanyName</td>
+                <td>
+                    <span class="badge @(stock.IsActive ? "bg-success" : "bg-secondary")">
+                        @(stock.IsActive ? "Aktif" : "Pasif")
+                    </span>
+                </td>
+                <td>
+                    <form method="post" asp-action="ToggleStock" asp-route-stockId="@stock.Id">
+                        <button type="submit" class="btn btn-sm btn-outline-secondary">
+                            @(stock.IsActive ? "Pasif Yap" : "Aktif Yap")
+                        </button>
+                    </form>
+                </td>
+            </tr>
+        }
+    </tbody>
+</table>
+
+<h4 class="mt-5">Son Çalışan Görevler</h4>
+<table class="table table-sm">
+    <thead>
+        <tr>
+            <th>Hisse</th>
+            <th>Başlangıç</th>
+            <th>Durum</th>
+            <th>Eklenen Kayıt</th>
+        </tr>
+    </thead>
+    <tbody>
+        @foreach (var log in recentLogs)
+        {
+            <tr>
+                <td>@(log.Stock?.Symbol ?? "-")</td>
+                <td>@log.StartedAt.ToLocalTime().ToString("dd.MM.yyyy HH:mm:ss")</td>
+                <td>
+                    <span class="badge @(log.Status == JobStatus.Success ? "bg-success" : "bg-danger")">
+                        @log.Status
+                    </span>
+                </td>
+                <td>@log.InsertedRowCount</td>
+            </tr>
+        }
+    </tbody>
+</table>
+
+@if (failedLogs.Count > 0)
+{
+    <h4 class="mt-5 text-danger">Hatalı Görevler</h4>
+    <table class="table table-sm">
+        <thead>
+            <tr>
+                <th>Hisse</th>
+                <th>Başlangıç</th>
+                <th>Hata Mesajı</th>
+            </tr>
+        </thead>
+        <tbody>
+            @foreach (var log in failedLogs)
+            {
+                <tr>
+                    <td>@(log.Stock?.Symbol ?? "-")</td>
+                    <td>@log.StartedAt.ToLocalTime().ToString("dd.MM.yyyy HH:mm:ss")</td>
+                    <td class="text-danger small">@log.ErrorMessage</td>
+                </tr>
+            }
+        </tbody>
+    </table>
+}
