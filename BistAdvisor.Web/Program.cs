@@ -1,6 +1,8 @@
+using BistAdvisor.Application.Bulletins;
 using BistAdvisor.Application.Dtos;
 using BistAdvisor.Application.Indicators;
 using BistAdvisor.Application.MarketData;
+using BistAdvisor.Infrastructure.Bulletins;
 using BistAdvisor.Infrastructure.Data;
 using BistAdvisor.Infrastructure.MarketData;
 using Microsoft.EntityFrameworkCore;
@@ -20,6 +22,7 @@ builder.Services.AddDbContext<ApplicationDbContext>(options =>
 builder.Services.AddScoped<IMarketDataProvider, MockMarketDataProvider>();
 builder.Services.AddScoped<IPriceDataService, PriceDataService>();
 builder.Services.AddScoped<ISignalService, SignalService>();
+builder.Services.AddScoped<IBulletinService, BulletinService>();
 
 var app = builder.Build();
 
@@ -177,6 +180,21 @@ app.MapGet("/api/signals/latest", async (ApplicationDbContext db, string? signal
         Page = page,
         PageSize = pageSize,
         TotalCount = totalCount
+    });
+});
+
+app.MapPost("/test-bulletin/", async (IBulletinService BulletinService) =>
+{
+    var bulletin = await BulletinService.GenerateDailyBulletinAsync(DateOnly.FromDateTime(DateTime.UtcNow));
+
+    return Results.Ok(new
+    {
+        bulletin.Id,
+        bulletin.Title,
+        bulletin.Summary,
+        bulletin.Status,
+        ItemCount = bulletin.Items.Count,
+        bulletin.Content
     });
 });
 
