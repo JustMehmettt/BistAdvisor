@@ -14,7 +14,7 @@ public class ApplicationDbContext : DbContext
     public DbSet<IndicatorResult> IndicatorResults => Set<IndicatorResult>();
     public DbSet<SignalSnapshot> SignalSnapshots => Set<SignalSnapshot>();
     public DbSet<SignalChange> SignalChanges => Set<SignalChange>();
-    public DbSet<DailyBulletin>  DailyBulletins => Set<DailyBulletin>();
+    public DbSet<DailyBulletin> DailyBulletins => Set<DailyBulletin>();
     public DbSet<BulletinItem> BulletinItems => Set<BulletinItem>();
     public DbSet<DataFetchLog> DataFetchLogs => Set<DataFetchLog>();
     

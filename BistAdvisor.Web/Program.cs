@@ -19,7 +19,7 @@ builder.Services.AddSwaggerGen();
 builder.Services.AddDbContext<ApplicationDbContext>(options =>
     options.UseSqlServer(builder.Configuration.GetConnectionString("DefaultConnection")));
 
-builder.Services.AddScoped<IMarketDataProvider, MockMarketDataProvider>();
+builder.Services.AddScoped<IMarketDataProvider, YahooMarketDataProvider>();
 builder.Services.AddScoped<IPriceDataService, PriceDataService>();
 builder.Services.AddScoped<ISignalService, SignalService>();
 builder.Services.AddScoped<IBulletinService, BulletinService>();
@@ -54,6 +54,7 @@ app.MapGet("/api/stocks", async (ApplicationDbContext db, int page = 1, int page
     {
         query = query.Where(s => s.Sector == sector);
     }
+
     var totalCount = await query.CountAsync();
 
     var stocks = await query
@@ -69,7 +70,7 @@ app.MapGet("/api/stocks", async (ApplicationDbContext db, int page = 1, int page
             IsActive = s.IsActive
         })
         .ToListAsync();
-    
+
     return Results.Ok(new PagedResult<StockDto>
     {
         Items = stocks,
@@ -98,90 +99,92 @@ app.MapGet("/api/stocks/{symbol}", async (string symbol, ApplicationDbContext db
     });
 });
 
-app.MapGet("/api/stocks/{symbol}/signals", async (string symbol, ApplicationDbContext db, int page = 1, int pageSize = 20) =>
-{
-    var stock = await db.Stocks.FirstOrDefaultAsync(s => s.Symbol == symbol);
-
-    if (stock is null)
+app.MapGet("/api/stocks/{symbol}/signals",
+    async (string symbol, ApplicationDbContext db, int page = 1, int pageSize = 20) =>
     {
-        return Results.NotFound(new { Message = $"Stock '{symbol}' not found." });
-    }
+        var stock = await db.Stocks.FirstOrDefaultAsync(s => s.Symbol == symbol);
 
-    var query = db.SignalSnapshots.Where(s => s.StockId == stock.Id);
-    var totalCount = await query.CountAsync();
-
-    var signals = await query
-        .OrderByDescending(s => s.CreatedAt)
-        .Skip((page - 1) * pageSize)
-        .Take(pageSize)
-        .Select(s => new SignalDto
+        if (stock is null)
         {
-            Symbol = stock.Symbol,
-            CompanyName = stock.CompanyName,
-            SignalType = s.SignalType.ToString(),
-            TotalScore = s.TotalScore,
-            ConfidenceRate = s.ConfidenceRate,
-            Explanation = s.Explanation,
-            CreatedAt = s.CreatedAt
-        })
-        .ToListAsync();
+            return Results.NotFound(new { Message = $"Stock '{symbol}' not found." });
+        }
 
-    return Results.Ok(new PagedResult<SignalDto>
-    {
-        Items = signals,
-        Page = page,
-        PageSize = pageSize,
-        TotalCount = totalCount
-    });
-});
+        var query = db.SignalSnapshots.Where(s => s.StockId == stock.Id);
+        var totalCount = await query.CountAsync();
 
-app.MapGet("/api/signals/latest", async (ApplicationDbContext db, string? signalType = null, int page = 1, int pageSize = 20) =>
-{
-    var latestTimestamps = db.SignalSnapshots
-        .GroupBy(s => s.StockId)
-        .Select(g => new { StockId = g.Key, MaxCreatedAt = g.Max(s => s.CreatedAt) });
+        var signals = await query
+            .OrderByDescending(s => s.CreatedAt)
+            .Skip((page - 1) * pageSize)
+            .Take(pageSize)
+            .Select(s => new SignalDto
+            {
+                Symbol = stock.Symbol,
+                CompanyName = stock.CompanyName,
+                SignalType = s.SignalType.ToString(),
+                TotalScore = s.TotalScore,
+                ConfidenceRate = s.ConfidenceRate,
+                Explanation = s.Explanation,
+                CreatedAt = s.CreatedAt
+            })
+            .ToListAsync();
 
-    var latestSignals = db.SignalSnapshots
-        .Join(latestTimestamps,
-            s => new { s.StockId, s.CreatedAt },
-            t => new { t.StockId, CreatedAt = t.MaxCreatedAt },
-            (s, t) => s);
-
-    if (!string.IsNullOrWhiteSpace(signalType) &&
-        Enum.TryParse<DomainSignalType>(signalType, true, out var parsedType))
-    {
-        latestSignals = latestSignals.Where(s => s.SignalType == parsedType);
-    }
-
-    var joined = latestSignals
-        .Join(db.Stocks, s => s.StockId, st => st.Id, (s, st) => new { Signal = s, Stock = st });
-
-    var totalCount = await joined.CountAsync();
-
-    var results = await joined
-        .OrderByDescending(x => x.Signal.CreatedAt)
-        .Skip((page - 1) * pageSize)
-        .Take(pageSize)
-        .Select(x => new SignalDto
+        return Results.Ok(new PagedResult<SignalDto>
         {
-            Symbol = x.Stock.Symbol,
-            CompanyName = x.Stock.CompanyName,
-            SignalType = x.Signal.SignalType.ToString(),
-            TotalScore = x.Signal.TotalScore,
-            ConfidenceRate = x.Signal.ConfidenceRate,
-            Explanation = x.Signal.Explanation,
-            CreatedAt = x.Signal.CreatedAt
-        })
-        .ToListAsync();
-
-    return Results.Ok(new PagedResult<SignalDto>
-    {
-        Items = results,
-        Page = page,
-        PageSize = pageSize,
-        TotalCount = totalCount
+            Items = signals,
+            Page = page,
+            PageSize = pageSize,
+            TotalCount = totalCount
+        });
     });
-});
+
+app.MapGet("/api/signals/latest",
+    async (ApplicationDbContext db, string? signalType = null, int page = 1, int pageSize = 20) =>
+    {
+        var latestTimestamps = db.SignalSnapshots
+            .GroupBy(s => s.StockId)
+            .Select(g => new { StockId = g.Key, MaxCreatedAt = g.Max(s => s.CreatedAt) });
+
+        var latestSignals = db.SignalSnapshots
+            .Join(latestTimestamps,
+                s => new { s.StockId, s.CreatedAt },
+                t => new { t.StockId, CreatedAt = t.MaxCreatedAt },
+                (s, t) => s);
+
+        if (!string.IsNullOrWhiteSpace(signalType) &&
+            Enum.TryParse<DomainSignalType>(signalType, true, out var parsedType))
+        {
+            latestSignals = latestSignals.Where(s => s.SignalType == parsedType);
+        }
+
+        var joined = latestSignals
+            .Join(db.Stocks, s => s.StockId, st => st.Id, (s, st) => new { Signal = s, Stock = st });
+
+        var totalCount = await joined.CountAsync();
+
+        var results = await joined
+            .OrderByDescending(x => x.Signal.CreatedAt)
+            .Skip((page - 1) * pageSize)
+            .Take(pageSize)
+            .Select(x => new SignalDto
+            {
+                Symbol = x.Stock.Symbol,
+                CompanyName = x.Stock.CompanyName,
+                SignalType = x.Signal.SignalType.ToString(),
+                TotalScore = x.Signal.TotalScore,
+                ConfidenceRate = x.Signal.ConfidenceRate,
+                Explanation = x.Signal.Explanation,
+                CreatedAt = x.Signal.CreatedAt
+            })
+            .ToListAsync();
+
+        return Results.Ok(new PagedResult<SignalDto>
+        {
+            Items = results,
+            Page = page,
+            PageSize = pageSize,
+            TotalCount = totalCount
+        });
+    });
 
 app.MapPost("/test-bulletin/", async (IBulletinService BulletinService) =>
 {

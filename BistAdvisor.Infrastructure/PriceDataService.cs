@@ -66,7 +66,7 @@ public class PriceDataService : IPriceDataService
                 ClosePrice = point.Close,
                 AdjustedClosePrice = point.AdjustedClose,
                 Volume = point.Volume,
-                DataSource = "Mock",
+                DataSource = _marketDataProvider.ProviderName,
                 ReceivedAt = now,
                 CreatedAt = now
             });

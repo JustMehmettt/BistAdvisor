@@ -4,6 +4,7 @@ namespace BistAdvisor.Application.MarketData;
 
 public interface IMarketDataProvider
 {
+    string ProviderName { get; }
     Task<IReadOnlyList<StockListItem>> GetStockListAsync(CancellationToken cancellationToken = default);
     
     Task<IReadOnlyList<MarketDataPoint>> GetHistoricalDataAsync(

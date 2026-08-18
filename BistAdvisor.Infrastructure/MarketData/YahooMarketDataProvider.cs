@@ -1,13 +1,18 @@
 ﻿using BistAdvisor.Application.MarketData;
-using YahooFinanceApi;
+using OoplesFinance.YahooFinanceAPI;
+using OoplesFinance.YahooFinanceAPI.Enums;
 
 namespace BistAdvisor.Infrastructure.MarketData;
 
 public class YahooMarketDataProvider : IMarketDataProvider
 {
-    public async Task<IReadOnlyList<StockListItem>> GetStockListAsync(CancellationToken cancellationToken = default)
+    private readonly YahooClient _client = new();
+    public string ProviderName => "Yahoo";
+
+    public Task<IReadOnlyList<StockListItem>> GetStockListAsync(CancellationToken cancellationToken = default)
     {
-        throw new NotImplementedException("Hisse listesi ayrı bir seed/config kaynağından yönetilecektir, bu metod ilerleyen adımda dolduracaktır.");
+        throw new NotImplementedException(
+            "Hisse listesi ayrı bir seed/config kaynağından yönetilecek, bu metod ilerleyen adımda dolduracağız.");
     }
 
     public async Task<IReadOnlyList<MarketDataPoint>> GetHistoricalDataAsync(
@@ -16,22 +21,22 @@ public class YahooMarketDataProvider : IMarketDataProvider
         DateTimeOffset to,
         CancellationToken cancellationToken = default)
     {
-        var candles = await Yahoo.GetHistoricalAsync(
+        var historicalData = await _client.GetHistoricalDataAsync(
             providerSymbol,
-            from.UtcDateTime,
-            to.UtcDateTime,
-            Period.Daily);
+            DataFrequency.Daily,
+            from.UtcDateTime);
 
-        return candles
-            .Select(c => new MarketDataPoint
+        return historicalData
+            .Where(d => d.Date <= to.UtcDateTime)
+            .Select(d => new MarketDataPoint
             {
-                Timestamp = new DateTimeOffset(c.DateTime, TimeSpan.Zero),
-                Open = c.Open,
-                High = c.High,
-                Low = c.Low,
-                Close = c.Close,
-                AdjustedClose = c.AdjustedClose,
-                Volume = c.Volume
+                Timestamp = new DateTimeOffset(d.Date, TimeSpan.Zero),
+                Open = (decimal)d.Open,
+                High = (decimal)d.High,
+                Low = (decimal)d.Low,
+                Close = (decimal)d.Close,
+                AdjustedClose = (decimal)d.AdjustedClose,
+                Volume = d.Volume
             })
             .ToList();
     }
@@ -40,22 +45,27 @@ public class YahooMarketDataProvider : IMarketDataProvider
         string providerSymbol,
         CancellationToken cancellationToken = default)
     {
-        var quote = await Yahoo.Symbols(providerSymbol).QueryAsync();
+        var historicalData = await _client.GetHistoricalDataAsync(
+            providerSymbol,
+            DataFrequency.Daily,
+            DateTime.UtcNow.AddDays(-5));
 
-        if (!quote.TryGetValue(providerSymbol, out var security))
+        var latest = historicalData.LastOrDefault();
+
+        if (latest is null)
         {
             return null;
         }
 
         return new MarketDataPoint
         {
-            Timestamp = DateTimeOffset.UtcNow,
-            Open = (decimal)security.RegularMarketOpen,
-            High = (decimal)security.RegularMarketDayHigh,
-            Low = (decimal)security.RegularMarketDayLow,
-            Close = (decimal)security.RegularMarketPrice,
-            AdjustedClose = null,
-            Volume = (long)security.RegularMarketVolume
+            Timestamp = new DateTimeOffset(latest.Date, TimeSpan.Zero),
+            Open = (decimal)latest.Open,
+            High = (decimal)latest.High,
+            Low = (decimal)latest.Low,
+            Close = (decimal)latest.Close,
+            AdjustedClose = (decimal)latest.AdjustedClose,
+            Volume = latest.Volume
         };
     }
 
@@ -63,8 +73,12 @@ public class YahooMarketDataProvider : IMarketDataProvider
     {
         try
         {
-            var quote = await Yahoo.Symbols("THYAO.IS").QueryAsync();
-            return quote.Count > 0;
+            var data = await _client.GetHistoricalDataAsync(
+                "THYAO.IS",
+                DataFrequency.Daily,
+                DateTime.UtcNow.AddDays(-5));
+
+            return data.Any();
         }
         catch
         {

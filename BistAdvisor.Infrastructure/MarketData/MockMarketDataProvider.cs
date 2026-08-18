@@ -7,6 +7,7 @@ namespace BistAdvisor.Infrastructure.MarketData;
 public class MockMarketDataProvider : IMarketDataProvider
 {
     private static readonly Random _random = new();
+    public string ProviderName => "Mock";
 
     public Task<IReadOnlyList<StockListItem>> GetStockListAsync(CancellationToken cancellationToken = default)
     {
