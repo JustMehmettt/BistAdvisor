@@ -12,8 +12,9 @@
     <div class="container">
         <a class="navbar-brand" href="/">BistAdvisor</a>
         <div class="navbar-nav">
-            <a class="nav-link" href="/">Dashboard</a>
-            <a class="nav-link" href="/Stocks">Hisseler</a>
+            <a class="nav-link" style="@(ViewContext.RouteData.Values["controller"]?.ToString() == "Dashboard" ? "color: #ffffff; font-weight: 600;" : "")" href="/">Dashboard</a>
+            <a class="nav-link" style="@(ViewContext.RouteData.Values["controller"]?.ToString() == "Stocks" ? "color: #ffffff; font-weight: 600;" : "")" href="/Stocks">Hisseler</a>
+            <a class="nav-link" style="@(ViewContext.RouteData.Values["controller"]?.ToString() == "Admin" ? "color: #ffffff; font-weight: 600;" : "")" href="/Admin">Yönetim</a>
         </div>
     </div>
 </nav>

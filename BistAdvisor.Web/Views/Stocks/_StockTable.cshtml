@@ -1,0 +1,70 @@
+﻿@using BistAdvisor.Application.Dtos
+@model List<StockListItemDto>
+
+@{
+var currentSortBy = ViewData["CurrentSortBy"]?.ToString() ?? "symbol";
+var currentSortDir = ViewData["CurrentSortDir"]?.ToString() ?? "asc";
+}
+
+<table class="table table-hover align-middle">
+    <thead>
+    <tr>
+        <th>
+            <a href="#" class="sort-link text-decoration-none text-dark" data-column="symbol">Hisse</a>
+            @if (currentSortBy == "symbol") { @(currentSortDir == "asc" ? "▲" : "▼") }
+        </th>
+        <th>
+            <a href="#" class="sort-link text-decoration-none text-dark" data-column="companyname">Şirket</a>
+            @if (currentSortBy == "companyname") { @(currentSortDir == "asc" ? "▲" : "▼") }
+        </th>
+        <th>
+            <a href="#" class="sort-link text-decoration-none text-dark" data-column="sector">Sektör</a>
+            @if (currentSortBy == "sector") { @(currentSortDir == "asc" ? "▲" : "▼") }
+        </th>
+        <th>
+            <a href="#" class="sort-link text-decoration-none text-dark" data-column="lastprice">Son Fiyat</a>
+            @if (currentSortBy == "lastprice") { @(currentSortDir == "asc" ? "▲" : "▼") }
+        </th>
+        <th>
+            <a href="#" class="sort-link text-decoration-none text-dark" data-column="totalscore">Skor</a>
+            @if (currentSortBy == "totalscore") { @(currentSortDir == "asc" ? "▲" : "▼") }
+        </th>
+        <th>
+            <a href="#" class="sort-link text-decoration-none text-dark" data-column="confidencerate">Güven Oranı</a>
+            @if (currentSortBy == "confidencerate") { @(currentSortDir == "asc" ? "▲" : "▼") }
+        </th>
+        <th>
+            <a href="#" class="sort-link text-decoration-none text-dark" data-column="signaltype">Sinyal</a>
+            @if (currentSortBy == "signaltype") { @(currentSortDir == "asc" ? "▲" : "▼") }
+        </th>
+        <th>
+            <a href="#" class="sort-link text-decoration-none text-dark" data-column="lastupdate">Son Güncelleme</a>
+                    @if (currentSortBy == "lastupdate") { @(currentSortDir == "asc" ? "▲" : "▼") }
+        </th>
+    </tr>
+    </thead>
+    <tbody>
+    @foreach (var stock in Model)
+    {
+    var badgeClass = stock.SignalType switch
+    {
+    "StrongBuy" => "bg-success",
+    "Buy" => "bg-success-subtle text-success",
+    "Sell" => "bg-danger-subtle text-danger",
+    "StrongSell" => "bg-danger",
+    _ => "bg-secondary-subtle text-secondary"
+    };
+
+    <tr>
+        <td><a href="/Stocks/Detail/@stock.Symbol"><strong>@stock.Symbol</strong></a></td>
+        <td>@stock.CompanyName</td>
+        <td>@stock.Sector</td>
+        <td>@(stock.LastPrice?.ToString("F2") ?? "-")</td>
+        <td>@(stock.TotalScore?.ToString("F2") ?? "-")</td>
+        <td>@(stock.ConfidenceRate?.ToString("F1") + "%")</td>
+        <td><span class="badge @badgeClass">@stock.SignalType</span></td>
+        <td>@(stock.LastUpdate?.ToLocalTime().ToString("dd.MM.yyyy HH:mm") ?? "-")</td>
+    </tr>
+    }
+    </tbody>
+</table>

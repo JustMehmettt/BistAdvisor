@@ -147,8 +147,6 @@
                 const cssClass = 'small mt-1 ' + (data.success ? 'text-success' : 'text-danger');
 
                 if (actionName === 'RunDataSync' || actionName === 'GenerateBulletin') {
-                    // Sayfa yenilenmeden önce mesajı geçici olarak sakla, yeni sayfa
-                    // yüklendiğinde tekrar göstereceğiz.
                     sessionStorage.setItem('adminMessage', text);
                     sessionStorage.setItem('adminMessageClass', cssClass);
                     sessionStorage.setItem('adminMessageTarget', messageId);
@@ -198,7 +196,6 @@
             }
         }
 
-        // Sayfa yüklendiğinde, önceki işlemden kalan bir mesaj var mı diye kontrol et
         document.addEventListener('DOMContentLoaded', () => {
             const savedMessage = sessionStorage.getItem('adminMessage');
             const savedClass = sessionStorage.getItem('adminMessageClass');

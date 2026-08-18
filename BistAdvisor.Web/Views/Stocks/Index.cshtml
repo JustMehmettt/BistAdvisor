@@ -8,7 +8,7 @@
 
 <h1 class="mb-4">Hisse Listesi</h1>
 
-<form method="get" class="row g-2 mb-4">
+<form method="get" class="row g-2 mb-4" id="filter-form">
     <div class="col-md-3">
         <input type="text" name="search" class="form-control" placeholder="Hisse kodu veya şirket ara..."
                value="@ViewData["CurrentSearch"]" />
@@ -41,41 +41,52 @@
     </div>
 </form>
 
-<table class="table table-hover align-middle">
-    <thead>
-        <tr>
-            <th>Hisse</th>
-            <th>Şirket</th>
-            <th>Sektör</th>
-            <th>Son Fiyat</th>
-            <th>Skor</th>
-            <th>Güven Oranı</th>
-            <th>Sinyal</th>
-            <th>Son Güncelleme</th>
-        </tr>
-    </thead>
-    <tbody>
-        @foreach (var stock in Model)
-        {
-            var badgeClass = stock.SignalType switch
-            {
-                "StrongBuy" => "bg-success",
-                "Buy" => "bg-success-subtle text-success",
-                "Sell" => "bg-danger-subtle text-danger",
-                "StrongSell" => "bg-danger",
-                _ => "bg-secondary-subtle text-secondary"
-            };
+<div id="stock-table-container">
+    @await Html.PartialAsync("_StockTable", Model)
+</div>
 
-            <tr>
-                <td><a href="/Stocks/Detail/@stock.Symbol"><strong>@stock.Symbol</strong></a></td>
-                <td>@stock.CompanyName</td>
-                <td>@stock.Sector</td>
-                <td>@(stock.LastPrice?.ToString("F2") ?? "-")</td>
-                <td>@(stock.TotalScore?.ToString("F2") ?? "-")</td>
-                <td>@(stock.ConfidenceRate?.ToString("F1") + "%")</td>
-                <td><span class="badge @badgeClass">@stock.SignalType</span></td>
-                <td>@(stock.LastUpdate?.ToLocalTime().ToString("dd.MM.yyyy HH:mm") ?? "-")</td>
-            </tr>
+@section Scripts {
+    <script>
+        let currentSortBy = '@ViewData["CurrentSortBy"]' || 'symbol';
+        let currentSortDir = '@ViewData["CurrentSortDir"]' || 'asc';
+
+        async function loadTable(sortBy, sortDir) {
+            const form = document.getElementById('filter-form');
+            const formData = new FormData(form);
+            const params = new URLSearchParams();
+
+            for (const [key, value] of formData.entries()) {
+                if (value) params.append(key, value);
+            }
+
+            params.append('sortBy', sortBy);
+            params.append('sortDir', sortDir);
+
+            const response = await fetch('/Stocks/Table?' + params.toString());
+            const html = await response.text();
+
+            document.getElementById('stock-table-container').innerHTML = html;
+            currentSortBy = sortBy;
+            currentSortDir = sortDir;
+            attachSortHandlers();
         }
-    </tbody>
-</table>
+
+        function attachSortHandlers() {
+            document.querySelectorAll('.sort-link').forEach(link => {
+                link.addEventListener('click', (e) => {
+                    e.preventDefault();
+                    const column = link.getAttribute('data-column');
+                    const newDir = (currentSortBy === column && currentSortDir === 'asc') ? 'desc' : 'asc';
+                    loadTable(column, newDir);
+                });
+            });
+        }
+
+        document.getElementById('filter-form').addEventListener('submit', (e) => {
+            e.preventDefault();
+            loadTable(currentSortBy, currentSortDir);
+        });
+
+        attachSortHandlers();
+    </script>
+}
