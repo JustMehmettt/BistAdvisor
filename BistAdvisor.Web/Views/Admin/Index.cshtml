@@ -8,26 +8,27 @@
 
 <h1 class="mb-4">Yönetim ve Log Sayfası</h1>
 
-@if (TempData["Message"] is string message)
-{
-    <div class="alert alert-info">@message</div>
-}
-
 <div class="row g-3 mb-4">
-    <div class="col-md-3">
-        <form method="post" asp-action="RunDataSync">
-            <button type="submit" class="btn btn-primary w-100">Veri Toplamayı Şimdi Çalıştır</button>
-        </form>
+    <div class="col-md-4">
+        <button type="button" class="btn btn-primary w-100" id="btn-sync" onclick="runAdminAction('RunDataSync', 'btn-sync', 'msg-sync')">
+            <span class="spinner-border spinner-border-sm d-none" id="spinner-sync"></span>
+            Veri Toplamayı Şimdi Çalıştır
+        </button>
+        <div class="small mt-1" id="msg-sync"></div>
     </div>
-    <div class="col-md-3">
-        <form method="post" asp-action="GenerateBulletin">
-            <button type="submit" class="btn btn-success w-100">Bülteni Şimdi Oluştur</button>
-        </form>
+    <div class="col-md-4">
+        <button type="button" class="btn btn-success w-100" id="btn-bulletin" onclick="runAdminAction('GenerateBulletin', 'btn-bulletin', 'msg-bulletin')">
+            <span class="spinner-border spinner-border-sm d-none" id="spinner-bulletin"></span>
+            Bülteni Şimdi Oluştur
+        </button>
+        <div class="small mt-1" id="msg-bulletin"></div>
     </div>
-    <div class="col-md-3">
-        <form method="post" asp-action="TestConnection">
-            <button type="submit" class="btn btn-secondary w-100">Veri Kaynağı Bağlantı Testi</button>
-        </form>
+    <div class="col-md-4">
+        <button type="button" class="btn btn-secondary w-100" id="btn-test" onclick="runAdminAction('TestConnection', 'btn-test', 'msg-test')">
+            <span class="spinner-border spinner-border-sm d-none" id="spinner-test"></span>
+            Veri Kaynağı Bağlantı Testi
+        </button>
+        <div class="small mt-1" id="msg-test"></div>
     </div>
 </div>
 
@@ -55,20 +56,20 @@
     <tbody>
         @foreach (var stock in stocks)
         {
-            <tr>
+            <tr id="stock-row-@stock.Id">
                 <td>@stock.Symbol</td>
                 <td>@stock.CompanyName</td>
                 <td>
-                    <span class="badge @(stock.IsActive ? "bg-success" : "bg-secondary")">
+                    <span class="badge @(stock.IsActive ? "bg-success" : "bg-secondary")" id="stock-badge-@stock.Id">
                         @(stock.IsActive ? "Aktif" : "Pasif")
                     </span>
                 </td>
                 <td>
-                    <form method="post" asp-action="ToggleStock" asp-route-stockId="@stock.Id">
-                        <button type="submit" class="btn btn-sm btn-outline-secondary">
-                            @(stock.IsActive ? "Pasif Yap" : "Aktif Yap")
-                        </button>
-                    </form>
+                    <button type="button" class="btn btn-sm btn-outline-secondary" id="stock-btn-@stock.Id"
+                            onclick="toggleStock(@stock.Id)">
+                        <span class="spinner-border spinner-border-sm d-none" id="stock-spinner-@stock.Id"></span>
+                        <span id="stock-btn-text-@stock.Id">@(stock.IsActive ? "Pasif Yap" : "Aktif Yap")</span>
+                    </button>
                 </td>
             </tr>
         }
@@ -124,4 +125,96 @@
             }
         </tbody>
     </table>
+}
+
+@section Scripts {
+    <script>
+        async function runAdminAction(actionName, buttonId, messageId) {
+            const button = document.getElementById(buttonId);
+            const spinner = document.getElementById('spinner-' + buttonId.replace('btn-', ''));
+            const messageEl = document.getElementById(messageId);
+
+            button.disabled = true;
+            spinner.classList.remove('d-none');
+            messageEl.textContent = '';
+            messageEl.className = 'small mt-1';
+
+            try {
+                const response = await fetch('/Admin/' + actionName, { method: 'POST' });
+                const data = await response.json();
+
+                const text = `${data.message} (${data.durationSeconds} s)`;
+                const cssClass = 'small mt-1 ' + (data.success ? 'text-success' : 'text-danger');
+
+                if (actionName === 'RunDataSync' || actionName === 'GenerateBulletin') {
+                    // Sayfa yenilenmeden önce mesajı geçici olarak sakla, yeni sayfa
+                    // yüklendiğinde tekrar göstereceğiz.
+                    sessionStorage.setItem('adminMessage', text);
+                    sessionStorage.setItem('adminMessageClass', cssClass);
+                    sessionStorage.setItem('adminMessageTarget', messageId);
+                    window.location.reload();
+                } else {
+                    messageEl.textContent = text;
+                    messageEl.className = cssClass;
+                }
+            } catch (err) {
+                messageEl.textContent = 'İşlem sırasında bir hata oluştu.';
+                messageEl.className = 'small mt-1 text-danger';
+            } finally {
+                button.disabled = false;
+                spinner.classList.add('d-none');
+            }
+        }
+
+        async function toggleStock(stockId) {
+            const button = document.getElementById('stock-btn-' + stockId);
+            const spinner = document.getElementById('stock-spinner-' + stockId);
+            const badge = document.getElementById('stock-badge-' + stockId);
+            const btnText = document.getElementById('stock-btn-text-' + stockId);
+
+            button.disabled = true;
+            spinner.classList.remove('d-none');
+
+            try {
+                const response = await fetch('/Admin/ToggleStock?stockId=' + stockId, { method: 'POST' });
+                const data = await response.json();
+
+                if (data.success) {
+                    if (data.isActive) {
+                        badge.textContent = 'Aktif';
+                        badge.className = 'badge bg-success';
+                        btnText.textContent = 'Pasif Yap';
+                    } else {
+                        badge.textContent = 'Pasif';
+                        badge.className = 'badge bg-secondary';
+                        btnText.textContent = 'Aktif Yap';
+                    }
+                }
+            } catch (err) {
+                alert('İşlem sırasında bir hata oluştu.');
+            } finally {
+                button.disabled = false;
+                spinner.classList.add('d-none');
+            }
+        }
+
+        // Sayfa yüklendiğinde, önceki işlemden kalan bir mesaj var mı diye kontrol et
+        document.addEventListener('DOMContentLoaded', () => {
+            const savedMessage = sessionStorage.getItem('adminMessage');
+            const savedClass = sessionStorage.getItem('adminMessageClass');
+            const savedTarget = sessionStorage.getItem('adminMessageTarget');
+
+            if (savedMessage && savedTarget) {
+                const targetEl = document.getElementById(savedTarget);
+                if (targetEl) {
+                    targetEl.textContent = savedMessage;
+                    targetEl.className = savedClass;
+                }
+
+                sessionStorage.removeItem('adminMessage');
+                sessionStorage.removeItem('adminMessageClass');
+                sessionStorage.removeItem('adminMessageTarget');
+            }
+        });
+    </script>
 }

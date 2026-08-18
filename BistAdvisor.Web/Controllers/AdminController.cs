@@ -1,4 +1,6 @@
-﻿using BistAdvisor.Application.Bulletins;
+﻿using System.Diagnostics;
+using System.Globalization;
+using BistAdvisor.Application.Bulletins;
 using BistAdvisor.Application.Indicators;
 using BistAdvisor.Application.MarketData;
 using BistAdvisor.Domain.Entities;
@@ -28,7 +30,7 @@ public class AdminController : Controller
         _priceDataService = priceDataService;
         _signalService = signalService;
         _bulletinService = bulletinService;
-        _marketDataProvider = marketDataProvider;   
+        _marketDataProvider = marketDataProvider;
     }
 
     public async Task<IActionResult> Index()
@@ -49,18 +51,19 @@ public class AdminController : Controller
             .OrderByDescending(l => l.StartedAt)
             .Take(10)
             .ToListAsync();
-        
+
         ViewData["Stocks"] = stocks;
         ViewData["RecentLogs"] = recentLogs;
         ViewData["FailedLogs"] = failedLogs;
-        
+
         return View();
     }
 
     [HttpPost]
-    [HttpPost]
     public async Task<IActionResult> RunDataSync()
     {
+        var stopwatch = Stopwatch.StartNew();
+
         var activeStocks = await _context.Stocks.Where(s => s.IsActive).ToListAsync();
 
         foreach (var stock in activeStocks)
@@ -97,39 +100,73 @@ public class AdminController : Controller
 
         await _context.SaveChangesAsync();
 
-        TempData["Message"] = "Data synchronization completed manually.";
-        return RedirectToAction(nameof(Index));
+        stopwatch.Stop();
+
+        return Json(new
+        {
+            success = true,
+            message = "Data synchronization completed.",
+            durationSeconds = stopwatch.Elapsed.TotalSeconds.ToString("F2", CultureInfo.InvariantCulture)
+        });
     }
 
     [HttpPost]
     public async Task<IActionResult> GenerateBulletin()
     {
+        var stopwatch = Stopwatch.StartNew();
+
         await _bulletinService.GenerateDailyBulletinAsync(DateOnly.FromDateTime(DateTime.UtcNow));
-        TempData["Message"] = "Bulletin generated manually.";
-        return RedirectToAction(nameof(Index));   
+
+        stopwatch.Stop();
+
+        return Json(new
+        {
+            success = true,
+            message = "Bulletin generated.",
+            durationSeconds = stopwatch.Elapsed.TotalSeconds.ToString("F2", CultureInfo.InvariantCulture)
+        });
     }
 
     [HttpPost]
     public async Task<IActionResult> ToggleStock(int stockId)
     {
+        var stopwatch = Stopwatch.StartNew();
+
         var stock = await _context.Stocks.FindAsync(stockId);
-        if (stock is not null)
+        if (stock is null)
         {
-            stock.IsActive = !stock.IsActive;
-            stock.UpdatedAt = DateTimeOffset.UtcNow;
-            await _context.SaveChangesAsync();
+            return Json(new { success = false, message = "Stock not found." });
         }
 
-        return RedirectToAction(nameof(Index));
+        stock.IsActive = !stock.IsActive;
+        stock.UpdatedAt = DateTimeOffset.UtcNow;
+        await _context.SaveChangesAsync();
+
+        stopwatch.Stop();
+
+        return Json(new
+        {
+            success = true,
+            message = stock.IsActive ? "Stock activated." : "Stock deactivated.",
+            durationSeconds = stopwatch.Elapsed.TotalSeconds.ToString("F2", CultureInfo.InvariantCulture),
+            isActive = stock.IsActive
+        });
     }
 
     [HttpPost]
     public async Task<IActionResult> TestConnection()
     {
+        var stopwatch = Stopwatch.StartNew();
+
         var isAvailable = await _marketDataProvider.IsAvailableAsync();
-        TempData["Message"] = isAvailable
-            ? "Data source connection successful."
-            : "Data source connection failed.";
-        return RedirectToAction(nameof(Index));
+
+        stopwatch.Stop();
+
+        return Json(new
+        {
+            success = isAvailable,
+            message = isAvailable ? "Data source connection successful." : "Data source connection failed.",
+            durationSeconds = stopwatch.Elapsed.TotalSeconds.ToString("F2", CultureInfo.InvariantCulture)
+        });
     }
 }
