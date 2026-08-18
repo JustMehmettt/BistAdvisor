@@ -186,19 +186,4 @@ app.MapGet("/api/signals/latest",
         });
     });
 
-app.MapPost("/test-bulletin/", async (IBulletinService BulletinService) =>
-{
-    var bulletin = await BulletinService.GenerateDailyBulletinAsync(DateOnly.FromDateTime(DateTime.UtcNow));
-
-    return Results.Ok(new
-    {
-        bulletin.Id,
-        bulletin.Title,
-        bulletin.Summary,
-        bulletin.Status,
-        ItemCount = bulletin.Items.Count,
-        bulletin.Content
-    });
-});
-
 app.Run();
