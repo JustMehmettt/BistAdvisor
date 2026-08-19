@@ -1,0 +1,93 @@
+﻿@using BistAdvisor.Application.Dtos
+@model BulletinDto?
+
+@{
+    ViewData["Title"] = "Günlük Bülten";
+    var availableDates = ViewData["AvailableDates"] as List<DateOnly> ?? new List<DateOnly>();
+}
+
+<h1 class="mb-4">Günlük Bülten</h1>
+
+<form method="get" class="row g-2 mb-4" id="date-form">
+    <div class="col-md-3">
+        <input type="date" name="date" id="date-picker" class="form-control"
+               value="@(ViewData["SelectedDate"] != null ? ((DateOnly)ViewData["SelectedDate"]!).ToString("yyyy-MM-dd") : "")" />
+    </div>
+</form>
+
+<script>
+    const availableDates = @Html.Raw(System.Text.Json.JsonSerializer.Serialize(availableDates.Select(d => d.ToString("yyyy-MM-dd"))));
+
+    const datePicker = document.getElementById('date-picker');
+
+    if (availableDates.length > 0) {
+        datePicker.min = availableDates[availableDates.length - 1];
+        datePicker.max = availableDates[0];
+    }
+
+    datePicker.addEventListener('input', function () {
+        if (availableDates.includes(this.value)) {
+            document.getElementById('date-form').submit();
+        }
+    });
+</script>
+
+@if (Model is null)
+{
+    <div class="alert alert-warning">Bu tarih için bülten bulunamadı.</div>
+}
+else
+{
+    <h3>@Model.Title</h3>
+    <p class="text-muted">
+        @Model.BulletinDate.ToString("dd.MM.yyyy") &middot;
+        <span class="badge @(Model.Status == "Active" ? "bg-success" : "bg-secondary")">@Model.Status</span> &middot;
+        Oluşturulma: @Model.GeneratedAt.ToLocalTime().ToString("dd.MM.yyyy HH:mm")
+    </p>
+
+    @if (!string.IsNullOrWhiteSpace(Model.Summary))
+    {
+        <div class="alert alert-light border">@Model.Summary</div>
+    }
+
+    @foreach (var group in Model.Items.GroupBy(i => i.SignalType))
+    {
+        var headerClass = group.Key switch
+        {
+            "StrongBuy" => "text-success",
+            "Buy" => "text-success",
+            "Sell" => "text-danger",
+            "StrongSell" => "text-danger",
+            _ => "text-secondary"
+        };
+
+        <h4 class="mt-4 @headerClass">@group.Key (@group.Count())</h4>
+        <table class="table table-sm">
+            <thead>
+                <tr>
+                    <th>Hisse</th>
+                    <th>Şirket</th>
+                    <th>Fiyat</th>
+                    <th>Günlük Değişim</th>
+                    <th>Skor</th>
+                    <th>Güven Oranı</th>
+                    <th>Gerekçe</th>
+                </tr>
+            </thead>
+            <tbody>
+                @foreach (var item in group)
+                {
+                    <tr>
+                        <td><a href="/Stocks/Detail/@item.Symbol"><strong>@item.Symbol</strong></a></td>
+                        <td>@item.CompanyName</td>
+                        <td>@(item.LastPrice?.ToString("F2") ?? "-")</td>
+                        <td>@(item.DailyChangeRate.HasValue ? $"{item.DailyChangeRate:F2}%" : "-")</td>
+                        <td>@(item.TotalScore?.ToString("F2") ?? "-")</td>
+                        <td>@(item.ConfidenceRate?.ToString("F1") + "%")</td>
+                        <td class="small">@item.ReasonText</td>
+                    </tr>
+                }
+            </tbody>
+        </table>
+    }
+}
