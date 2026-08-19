@@ -23,5 +23,5 @@ public class IndicatorResult
     public decimal? StochasticD { get; set; }
     public long? AverageVolume20 { get; set; }
     
-    public DateTimeOffset CreatedAt { get; set; }
+    public DateTimeOffset CalculatedAt { get; set; }
 }

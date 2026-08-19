@@ -1,8 +1,8 @@
-﻿using BistAdvisor.Application.Indicators;
+﻿using System.Globalization;
+using BistAdvisor.Application.Indicators;
 using BistAdvisor.Domain.Entities;
 using BistAdvisor.Infrastructure.Data;
 using Microsoft.EntityFrameworkCore;
-using System.Globalization;
 
 namespace BistAdvisor.Infrastructure.Indicators;
 
@@ -26,7 +26,7 @@ public class SignalService : ISignalService
         {
             throw new InvalidOperationException($"'{stockSymbol}' sembollü hisse veritabanında bulunamadı.");
         }
-        
+
         var previousSnapshot = await _context.SignalSnapshots
             .Where(s => s.StockId == stock.Id)
             .OrderByDescending(s => s.CreatedAt)
@@ -49,8 +49,9 @@ public class SignalService : ISignalService
         var bollingerScore = IndicatorScoreCalculator.ScoreBollinger(bollinger);
         var stochasticScore = IndicatorScoreCalculator.ScoreStochastic(stochastic);
 
-        var signal = new SignalCalculator().Calculate(rsiScore, macdScore, emaScore, bollingerScore, stochasticScore);
-        
+        var signal = new SignalCalculator().Calculate(
+            rsiScore, macdScore, emaScore, bollingerScore, stochasticScore);
+
         var now = DateTimeOffset.UtcNow;
         var latestBarTime = priceBars.Count > 0 ? priceBars[^1].BarTime : now;
         var newSignalType = MapSignalType(signal.SignalType);
@@ -73,6 +74,54 @@ public class SignalService : ISignalService
             CreatedAt = now
         };
 
+        var existingIndicatorResult = await _context.IndicatorResults
+            .FirstOrDefaultAsync(
+                r => r.StockId == stock.Id && r.Interval == PriceInterval.Daily && r.BarTime == latestBarTime,
+                cancellationToken);
+
+        if (existingIndicatorResult is not null)
+        {
+            existingIndicatorResult.RsiValue = rsi;
+            existingIndicatorResult.MacdValue = macd.MacdLine;
+            existingIndicatorResult.MacdSignalValue = macd.SignalLine;
+            existingIndicatorResult.MacdHistogramValue = macd.Histogram;
+            existingIndicatorResult.Ema20 = ema.Ema20;
+            existingIndicatorResult.Ema50 = ema.Ema50;
+            existingIndicatorResult.BollingerUpper = bollinger.UpperBand;
+            existingIndicatorResult.BollingerMiddle = bollinger.MiddleBand;
+            existingIndicatorResult.BollingerLower = bollinger.LowerBand;
+            existingIndicatorResult.StochasticK = stochastic.PercentK;
+            existingIndicatorResult.StochasticD = stochastic.PercentD;
+            existingIndicatorResult.AverageVolume20 = priceBars.Count >= 20
+                ? (long)priceBars.TakeLast(20).Average(p => p.Volume)
+                : null;
+            existingIndicatorResult.CalculatedAt = now;
+        }
+        else
+        {
+            _context.IndicatorResults.Add(new IndicatorResult
+            {
+                StockId = stock.Id,
+                BarTime = latestBarTime,
+                Interval = PriceInterval.Daily,
+                RsiValue = rsi,
+                MacdValue = macd.MacdLine,
+                MacdSignalValue = macd.SignalLine,
+                MacdHistogramValue = macd.Histogram,
+                Ema20 = ema.Ema20,
+                Ema50 = ema.Ema50,
+                BollingerUpper = bollinger.UpperBand,
+                BollingerMiddle = bollinger.MiddleBand,
+                BollingerLower = bollinger.LowerBand,
+                StochasticK = stochastic.PercentK,
+                StochasticD = stochastic.PercentD,
+                AverageVolume20 = priceBars.Count >= 20
+                    ? (long)priceBars.TakeLast(20).Average(p => p.Volume)
+                    : null,
+                CalculatedAt = now
+            });
+        }
+
         _context.SignalSnapshots.Add(snapshot);
 
         if (previousSnapshot is not null && previousSnapshot.SignalType != newSignalType)
@@ -91,9 +140,10 @@ public class SignalService : ISignalService
                 AlgorithmVersion = "v1.0",
                 CreatedAt = now
             };
-            
+
             _context.SignalChanges.Add(change);
         }
+
         await _context.SaveChangesAsync(cancellationToken);
 
         return snapshot;
