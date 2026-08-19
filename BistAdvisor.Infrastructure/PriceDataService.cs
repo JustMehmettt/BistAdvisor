@@ -16,8 +16,7 @@ public class PriceDataService : IPriceDataService
         _marketDataProvider = marketDataProvider;
     }
 
-    public async Task<int> SyncHistoricalDataAsync(string stockSymbol, DateTimeOffset from, DateTimeOffset to,
-        CancellationToken cancellationToken = default)
+    public async Task<int> SyncHistoricalDataAsync(string stockSymbol, DateTimeOffset from, DateTimeOffset to, CancellationToken cancellationToken = default)
     {
         var stock = await _context.Stocks
             .FirstOrDefaultAsync(s => s.Symbol == stockSymbol, cancellationToken);
@@ -36,28 +35,55 @@ public class PriceDataService : IPriceDataService
             FetchedAt = DateTimeOffset.UtcNow
         };
 
-        try
-        {
-            points = await _marketDataProvider.GetHistoricalDataAsync(
-                stock.ProviderSymbol,
-                from,
-                to,
-                cancellationToken);
+        const int maxRetries = 3;
+        var attempt = 0;
+        Exception? lastException = null;
 
-            rawLog.WasSuccessful = true;
-            rawLog.RawResponse = System.Text.Json.JsonSerializer.Serialize(points);
-        }
-        catch (Exception ex)
+        while (attempt < maxRetries)
         {
-            rawLog.WasSuccessful = false;
-            rawLog.ErrorMessage = ex.Message;
-            _context.MarketDataRawLogs.Add(rawLog);
-            await _context.SaveChangesAsync(cancellationToken);
-            throw;
+            try
+            {
+                points = await _marketDataProvider.GetHistoricalDataAsync(
+                    stock.ProviderSymbol,
+                    from,
+                    to,
+                    cancellationToken);
+
+                rawLog.WasSuccessful = true;
+                rawLog.RawResponse = System.Text.Json.JsonSerializer.Serialize(points);
+                rawLog.RetryCount = attempt;
+
+                _context.MarketDataRawLogs.Add(rawLog);
+
+                return await PersistPriceBarsAsync(stock, points, cancellationToken);
+            }
+            catch (Exception ex)
+            {
+                lastException = ex;
+                attempt++;
+
+                if (attempt < maxRetries)
+                {
+                    var delaySeconds = Math.Pow(2, attempt);
+                    await Task.Delay(TimeSpan.FromSeconds(delaySeconds), cancellationToken);
+                }
+            }
         }
 
+        rawLog.WasSuccessful = false;
+        rawLog.ErrorMessage = lastException?.Message;
+        rawLog.RetryCount = attempt;
         _context.MarketDataRawLogs.Add(rawLog);
+        await _context.SaveChangesAsync(cancellationToken);
 
+        throw new InvalidOperationException($"'{stockSymbol}' için veri çekilemedi, {maxRetries} deneme başarısız oldu.", lastException);
+    }
+
+    private async Task<int> PersistPriceBarsAsync(
+        Stock stock,
+        IReadOnlyList<MarketDataPoint> points,
+        CancellationToken cancellationToken)
+    {
         var existingBarTimes = await _context.PriceBars
             .Where(p => p.StockId == stock.Id && p.Interval == PriceInterval.Daily)
             .Select(p => p.BarTime)

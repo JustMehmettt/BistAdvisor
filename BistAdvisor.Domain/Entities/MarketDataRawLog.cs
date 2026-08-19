@@ -11,6 +11,7 @@ public class MarketDataRawLog
     public string RequestSymbol { get; set; } = string.Empty;
     public string? RawResponse { get; set; }
     public bool WasSuccessful { get; set; }
+    public int? RetryCount { get; set; }
     public string? ErrorMessage { get; set; }
     
     public DateTimeOffset FetchedAt { get; set; }
