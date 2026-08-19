@@ -1,0 +1,81 @@
+﻿@using BistAdvisor.Application.Dtos
+@model List<SignalChangeDto>
+
+@{
+    ViewData["Title"] = "Sinyal Geçmişi";
+    var page = (int)(ViewData["Page"] ?? 1);
+    var totalPages = (int)(ViewData["TotalPages"] ?? 1);
+}
+
+<h1 class="mb-4">Sinyal Geçmişi</h1>
+
+<form method="get" class="row g-2 mb-4">
+    <div class="col-md-3">
+        <select name="signalType" class="form-select" onchange="this.form.submit()">
+            <option value="">Tüm Sinyaller</option>
+            <option value="StrongBuy" selected="@("StrongBuy" == ViewData["CurrentSignalType"]?.ToString())">Güçlü Al</option>
+            <option value="Buy" selected="@("Buy" == ViewData["CurrentSignalType"]?.ToString())">Al</option>
+            <option value="Neutral" selected="@("Neutral" == ViewData["CurrentSignalType"]?.ToString())">Nötr</option>
+            <option value="Sell" selected="@("Sell" == ViewData["CurrentSignalType"]?.ToString())">Sat</option>
+            <option value="StrongSell" selected="@("StrongSell" == ViewData["CurrentSignalType"]?.ToString())">Güçlü Sat</option>
+        </select>
+    </div>
+</form>
+
+@if (Model.Count == 0)
+{
+    <div class="alert alert-info">Henüz sinyal değişikliği kaydı bulunmuyor.</div>
+}
+else
+{
+    <table class="table table-hover table-sm">
+        <thead>
+            <tr>
+                <th>Tarih</th>
+                <th>Hisse</th>
+                <th>Şirket</th>
+                <th>Önceki Sinyal</th>
+                <th>Yeni Sinyal</th>
+                <th>Önceki Skor</th>
+                <th>Yeni Skor</th>
+            </tr>
+        </thead>
+        <tbody>
+            @foreach (var change in Model)
+            {
+                var newBadgeClass = change.NewSignalType switch
+                {
+                    "StrongBuy" => "bg-success",
+                    "Buy" => "bg-success-subtle text-success",
+                    "Sell" => "bg-danger-subtle text-danger",
+                    "StrongSell" => "bg-danger",
+                    _ => "bg-secondary-subtle text-secondary"
+                };
+
+                <tr>
+                    <td>@change.ChangeTime.ToLocalTime().ToString("dd.MM.yyyy HH:mm")</td>
+                    <td><a href="/Stocks/Detail/@change.Symbol"><strong>@change.Symbol</strong></a></td>
+                    <td>@change.CompanyName</td>
+                    <td><span class="badge bg-secondary-subtle text-secondary">@change.PreviousSignalType</span></td>
+                    <td><span class="badge @newBadgeClass">@change.NewSignalType</span></td>
+                    <td>@(change.PreviousScore?.ToString("F2") ?? "-")</td>
+                    <td>@(change.NewScore?.ToString("F2") ?? "-")</td>
+                </tr>
+            }
+        </tbody>
+    </table>
+
+    @if (totalPages > 1)
+    {
+        <nav>
+            <ul class="pagination">
+                @for (var i = 1; i <= totalPages; i++)
+                {
+                    <li class="page-item @(i == page ? "active" : "")">
+                        <a class="page-link" href="/SignalHistory?page=@i&signalType=@ViewData["CurrentSignalType"]">@i</a>
+                    </li>
+                }
+            </ul>
+        </nav>
+    }
+}

@@ -19,6 +19,12 @@
                style="@(ViewContext.RouteData.Values["controller"]?.ToString() == "Stocks" ? "color: #ffffff; font-weight: 600;" : "")"
                href="/Stocks">Hisseler</a>
             <a class="nav-link"
+               style="@(ViewContext.RouteData.Values["controller"]?.ToString() == "Bulletin" ? "color: #ffffff; font-weight: 600;" : "")"
+               href="/Bulletin">Bülten</a>
+            <a class="nav-link"
+               style="@(ViewContext.RouteData.Values["controller"]?.ToString() == "SignalHistory" ? "color: #ffffff; font-weight: 600;" : "")"
+               href="/SignalHistory">Sinyal Geçmişi</a>
+            <a class="nav-link"
                style="@(ViewContext.RouteData.Values["controller"]?.ToString() == "Admin" ? "color: #ffffff; font-weight: 600;" : "")"
                href="/Admin">Yönetim</a>
             @if (User.Identity?.IsAuthenticated == true)
@@ -27,9 +33,6 @@
                     <button type="submit" class="btn btn-sm btn-outline-light ms-2">Çıkış</button>
                 </form>
             }
-            <a class="nav-link"
-               style="@(ViewContext.RouteData.Values["controller"]?.ToString() == "Bulletin" ? "color: #ffffff; font-weight: 600;" : "")"
-               href="/Bulletin">Bülten</a>
         </div>
     </div>
 </nav>
