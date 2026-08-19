@@ -5,12 +5,14 @@ using BistAdvisor.Application.Indicators;
 using BistAdvisor.Application.MarketData;
 using BistAdvisor.Domain.Entities;
 using BistAdvisor.Infrastructure.Data;
+using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
 
 namespace BistAdvisor.Web.Controllers;
 
 [ApiExplorerSettings(IgnoreApi = true)]
+[Authorize]
 public class AdminController : Controller
 {
     private readonly ApplicationDbContext _context;
