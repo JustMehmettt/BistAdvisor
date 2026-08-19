@@ -55,6 +55,11 @@ public class PriceDataService : IPriceDataService
                 continue;
             }
 
+            if (point.Close <= 0 || point.Open <= 0 || point.High <= 0 || point.Low <= 0)
+            {
+                continue;
+            }
+
             newBars.Add(new PriceBar
             {
                 StockId = stock.Id,
