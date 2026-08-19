@@ -17,6 +17,7 @@ public class ApplicationDbContext : DbContext
     public DbSet<DailyBulletin> DailyBulletins => Set<DailyBulletin>();
     public DbSet<BulletinItem> BulletinItems => Set<BulletinItem>();
     public DbSet<DataFetchLog> DataFetchLogs => Set<DataFetchLog>();
+    public DbSet<MarketDataRawLog> MarketDataRawLogs => Set<MarketDataRawLog>();
     
     protected override void OnModelCreating(ModelBuilder modelBuilder)
     {
@@ -126,6 +127,18 @@ public class ApplicationDbContext : DbContext
         {
             entity.Property(l => l.JobName).HasMaxLength(100).IsRequired();
             
+            entity.HasOne(l => l.Stock)
+                .WithMany()
+                .HasForeignKey(l => l.StockId)
+                .OnDelete(DeleteBehavior.SetNull);
+        });
+        
+        modelBuilder.Entity<MarketDataRawLog>(entity =>
+        {
+            entity.Property(l => l.ProviderName).HasMaxLength(50).IsRequired();
+            entity.Property(l => l.RequestSymbol).HasMaxLength(20).IsRequired();
+            entity.Property(l => l.RawResponse).HasColumnType("nvarchar(max)");
+
             entity.HasOne(l => l.Stock)
                 .WithMany()
                 .HasForeignKey(l => l.StockId)

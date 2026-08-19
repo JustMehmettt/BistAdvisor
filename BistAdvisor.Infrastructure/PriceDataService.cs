@@ -16,10 +16,7 @@ public class PriceDataService : IPriceDataService
         _marketDataProvider = marketDataProvider;
     }
 
-    public async Task<int> SyncHistoricalDataAsync(
-        string stockSymbol,
-        DateTimeOffset from,
-        DateTimeOffset to,
+    public async Task<int> SyncHistoricalDataAsync(string stockSymbol, DateTimeOffset from, DateTimeOffset to,
         CancellationToken cancellationToken = default)
     {
         var stock = await _context.Stocks
@@ -30,11 +27,36 @@ public class PriceDataService : IPriceDataService
             throw new InvalidOperationException($"'{stockSymbol}' sembollü hisse veritabanında bulunamadı.");
         }
 
-        var points = await _marketDataProvider.GetHistoricalDataAsync(
-            stock.ProviderSymbol,
-            from,
-            to,
-            cancellationToken);
+        IReadOnlyList<MarketDataPoint> points;
+        var rawLog = new MarketDataRawLog
+        {
+            StockId = stock.Id,
+            ProviderName = _marketDataProvider.ProviderName,
+            RequestSymbol = stock.ProviderSymbol,
+            FetchedAt = DateTimeOffset.UtcNow
+        };
+
+        try
+        {
+            points = await _marketDataProvider.GetHistoricalDataAsync(
+                stock.ProviderSymbol,
+                from,
+                to,
+                cancellationToken);
+
+            rawLog.WasSuccessful = true;
+            rawLog.RawResponse = System.Text.Json.JsonSerializer.Serialize(points);
+        }
+        catch (Exception ex)
+        {
+            rawLog.WasSuccessful = false;
+            rawLog.ErrorMessage = ex.Message;
+            _context.MarketDataRawLogs.Add(rawLog);
+            await _context.SaveChangesAsync(cancellationToken);
+            throw;
+        }
+
+        _context.MarketDataRawLogs.Add(rawLog);
 
         var existingBarTimes = await _context.PriceBars
             .Where(p => p.StockId == stock.Id && p.Interval == PriceInterval.Daily)
@@ -80,8 +102,9 @@ public class PriceDataService : IPriceDataService
         if (newBars.Count > 0)
         {
             await _context.PriceBars.AddRangeAsync(newBars, cancellationToken);
-            await _context.SaveChangesAsync(cancellationToken);
         }
+
+        await _context.SaveChangesAsync(cancellationToken);
 
         return newBars.Count;
     }
