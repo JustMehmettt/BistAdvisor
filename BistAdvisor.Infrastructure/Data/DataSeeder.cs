@@ -120,6 +120,27 @@ public static class DataSeeder
 
         await context.Stocks.AddRangeAsync(stocks);
         await context.SaveChangesAsync();
+
+        if (!await context.ApplicationSettings.AnyAsync())
+        {
+            var settingsNow = DateTimeOffset.UtcNow;
+
+            var settings = new List<ApplicationSetting>
+            {
+                new() { Key = "Weight.Rsi", Value = "0.20", Description = "RSI indicator weight", UpdatedAt = settingsNow },
+                new() { Key = "Weight.Macd", Value = "0.25", Description = "MACD indicator weight", UpdatedAt = settingsNow },
+                new() { Key = "Weight.Ema", Value = "0.25", Description = "EMA20/EMA50 indicator weight", UpdatedAt = settingsNow },
+                new() { Key = "Weight.Bollinger", Value = "0.15", Description = "Bollinger Bands indicator weight", UpdatedAt = settingsNow },
+                new() { Key = "Weight.Stochastic", Value = "0.15", Description = "Stochastic Oscillator indicator weight", UpdatedAt = settingsNow },
+                new() { Key = "Threshold.StrongBuy", Value = "60", Description = "Minimum score for Strong Buy signal", UpdatedAt = settingsNow },
+                new() { Key = "Threshold.Buy", Value = "20", Description = "Minimum score for Buy signal", UpdatedAt = settingsNow },
+                new() { Key = "Threshold.Neutral", Value = "-19", Description = "Minimum score for Neutral signal", UpdatedAt = settingsNow },
+                new() { Key = "Threshold.Sell", Value = "-59", Description = "Minimum score for Sell signal", UpdatedAt = settingsNow }
+            };
+
+            await context.ApplicationSettings.AddRangeAsync(settings);
+            await context.SaveChangesAsync();
+        }
     }
 
     private static Stock Create(string symbol, string providerSymbol, string companyName, string? sector,

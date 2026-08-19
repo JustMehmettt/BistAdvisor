@@ -18,6 +18,7 @@ public class ApplicationDbContext : DbContext
     public DbSet<BulletinItem> BulletinItems => Set<BulletinItem>();
     public DbSet<DataFetchLog> DataFetchLogs => Set<DataFetchLog>();
     public DbSet<MarketDataRawLog> MarketDataRawLogs => Set<MarketDataRawLog>();
+    public DbSet<ApplicationSetting> ApplicationSettings => Set<ApplicationSetting>();
     
     protected override void OnModelCreating(ModelBuilder modelBuilder)
     {
@@ -143,6 +144,13 @@ public class ApplicationDbContext : DbContext
                 .WithMany()
                 .HasForeignKey(l => l.StockId)
                 .OnDelete(DeleteBehavior.SetNull);
+        });
+        
+        modelBuilder.Entity<ApplicationSetting>(entity =>
+        {
+            entity.HasIndex(s => s.Key).IsUnique();
+            entity.Property(s => s.Key).HasMaxLength(100).IsRequired();
+            entity.Property(s => s.Value).HasMaxLength(50).IsRequired();
         });
     }
 }

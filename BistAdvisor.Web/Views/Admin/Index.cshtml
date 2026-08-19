@@ -32,14 +32,28 @@
     </div>
 </div>
 
-<h4 class="mt-5">İndikatör Ağırlıkları</h4>
+@{
+    var settings = ViewData["Settings"] as List<ApplicationSetting> ?? new List<ApplicationSetting>();
+}
+
+<h4 class="mt-5">Sistem Ayarları</h4>
 <table class="table table-sm w-auto">
+    <thead>
+    <tr>
+        <th>Ayar</th>
+        <th>Değer</th>
+        <th>Açıklama</th>
+    </tr>
+    </thead>
     <tbody>
-        <tr><td>MACD</td><td>%25</td></tr>
-        <tr><td>EMA20/EMA50</td><td>%25</td></tr>
-        <tr><td>RSI</td><td>%20</td></tr>
-        <tr><td>Bollinger Bantları</td><td>%15</td></tr>
-        <tr><td>Stochastic Oscillator</td><td>%15</td></tr>
+    @foreach (var setting in settings)
+    {
+        <tr>
+            <td><code>@setting.Key</code></td>
+            <td>@setting.Value</td>
+            <td class="small text-muted">@setting.Description</td>
+        </tr>
+    }
     </tbody>
 </table>
 

@@ -57,6 +57,8 @@ public class AdminController : Controller
         ViewData["Stocks"] = stocks;
         ViewData["RecentLogs"] = recentLogs;
         ViewData["FailedLogs"] = failedLogs;
+        var settings = await _context.ApplicationSettings.OrderBy(s => s.Key).ToListAsync();
+        ViewData["Settings"] = settings;
 
         return View();
     }

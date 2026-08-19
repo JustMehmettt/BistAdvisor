@@ -1,14 +1,27 @@
 ﻿namespace BistAdvisor.Application.Indicators;
 
+public class SignalWeights
+{
+    public decimal MacdWeight { get; set; } = 0.25m;
+    public decimal EmaWeight { get; set; } = 0.25m;
+    public decimal RsiWeight { get; set; } = 0.20m;
+    public decimal BollingerWeight { get; set; } = 0.15m;
+    public decimal StochasticWeight { get; set; } = 0.15m;
+    public decimal StrongBuyThreshold { get; set; } = 60m;
+    public decimal BuyThreshold { get; set; } = 20m;
+    public decimal NeutralThreshold { get; set; } = -19m;
+    public decimal SellThreshold { get; set; } = -59m;
+}
+
 public class SignalCalculator
 {
-    private const decimal MacdWeight = 0.25m;
-    private const decimal EmaWeight = 0.25m;
-    private const decimal RsiWeight = 0.20m;
-    private const decimal BollingerWeight = 0.15m;
-    private const decimal StochasticWeight = 0.15m;
-
     private const int MinimumRequiredIndicators = 4;
+    private readonly SignalWeights _weights;
+
+    public SignalCalculator(SignalWeights? weights = null)
+    {
+        _weights = weights ?? new SignalWeights();
+    }
 
     public SignalResult Calculate(
         int? rsiScore,
@@ -36,11 +49,11 @@ public class SignalCalculator
         }
 
         decimal totalScore = 0;
-        totalScore += (rsiScore ?? 0) * RsiWeight;
-        totalScore += (macdScore ?? 0) * MacdWeight;
-        totalScore += (emaScore ?? 0) * EmaWeight;
-        totalScore += (bollingerScore ?? 0) * BollingerWeight;
-        totalScore += (stochasticScore ?? 0) * StochasticWeight;
+        totalScore += (rsiScore ?? 0) * _weights.RsiWeight;
+        totalScore += (macdScore ?? 0) * _weights.MacdWeight;
+        totalScore += (emaScore ?? 0) * _weights.EmaWeight;
+        totalScore += (bollingerScore ?? 0) * _weights.BollingerWeight;
+        totalScore += (stochasticScore ?? 0) * _weights.StochasticWeight;
 
         totalScore *= 50;
 
@@ -51,14 +64,14 @@ public class SignalCalculator
         return result;
     }
 
-    private static SignalType ClassifySignal(decimal totalScore)
+    private SignalType ClassifySignal(decimal totalScore)
     {
         return totalScore switch
         {
-            >= 60 => SignalType.StrongBuy,
-            >= 20 => SignalType.Buy,
-            >= -19 => SignalType.Neutral,
-            >= -59 => SignalType.Sell,
+            var s when s >= _weights.StrongBuyThreshold => SignalType.StrongBuy,
+            var s when s >= _weights.BuyThreshold => SignalType.Buy,
+            var s when s >= _weights.NeutralThreshold => SignalType.Neutral,
+            var s when s >= _weights.SellThreshold => SignalType.Sell,
             _ => SignalType.StrongSell
         };
     }

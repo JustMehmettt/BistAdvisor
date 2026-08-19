@@ -49,7 +49,22 @@ public class SignalService : ISignalService
         var bollingerScore = IndicatorScoreCalculator.ScoreBollinger(bollinger);
         var stochasticScore = IndicatorScoreCalculator.ScoreStochastic(stochastic);
 
-        var signal = new SignalCalculator().Calculate(
+        var settingsDict = await _context.ApplicationSettings.ToDictionaryAsync(s => s.Key, s => s.Value, cancellationToken);
+
+        var weights = new SignalWeights
+        {
+            RsiWeight = ParseDecimal(settingsDict, "Weight.Rsi", 0.20m),
+            MacdWeight = ParseDecimal(settingsDict, "Weight.Macd", 0.25m),
+            EmaWeight = ParseDecimal(settingsDict, "Weight.Ema", 0.25m),
+            BollingerWeight = ParseDecimal(settingsDict, "Weight.Bollinger", 0.15m),
+            StochasticWeight = ParseDecimal(settingsDict, "Weight.Stochastic", 0.15m),
+            StrongBuyThreshold = ParseDecimal(settingsDict, "Threshold.StrongBuy", 60m),
+            BuyThreshold = ParseDecimal(settingsDict, "Threshold.Buy", 20m),
+            NeutralThreshold = ParseDecimal(settingsDict, "Threshold.Neutral", -19m),
+            SellThreshold = ParseDecimal(settingsDict, "Threshold.Sell", -59m)
+        };
+
+        var signal = new SignalCalculator(weights).Calculate(
             rsiScore, macdScore, emaScore, bollingerScore, stochasticScore);
 
         var now = DateTimeOffset.UtcNow;
@@ -182,5 +197,15 @@ public class SignalService : ISignalService
                $"{confidenceText}%. RSI is at {rsiText}. " +
                $"MACD line is {(macd.MacdLine > macd.SignalLine ? "above" : "below")} the signal line. " +
                $"Current price is {(ema.CurrentPrice > ema.Ema20 ? "above" : "below")} EMA20.";
+    }
+    
+    private static decimal ParseDecimal(Dictionary<string, string> settings, string key, decimal defaultValue)
+    {
+        if (settings.TryGetValue(key, out var value) && decimal.TryParse(value, System.Globalization.CultureInfo.InvariantCulture, out var parsed))
+        {
+            return parsed;
+        }
+
+        return defaultValue;
     }
 }
