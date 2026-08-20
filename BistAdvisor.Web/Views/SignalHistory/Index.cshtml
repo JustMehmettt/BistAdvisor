@@ -70,7 +70,7 @@ else
                     <td>@change.ChangeTime.ToLocalTime().ToString("dd.MM.yyyy HH:mm")</td>
                     <td><a href="/Stocks/Detail/@change.Symbol" class="text-decoration-none" style="color:#0A8DD0; font-weight:600;">@change.Symbol</a></td>
                     <td>@change.CompanyName</td>
-                    <td><span class="pill pill-gray">@GroupLabel(change.PreviousSignalType)</span></td>
+                    <td><span class="pill @PillClass(change.PreviousSignalType)">@GroupLabel(change.PreviousSignalType)</span></td>
                     <td><span class="pill @PillClass(change.NewSignalType)">@GroupLabel(change.NewSignalType)</span></td>
                     <td>@(change.PreviousScore?.ToString("F2") ?? "-")</td>
                     <td>@(change.NewScore?.ToString("F2") ?? "-")</td>
