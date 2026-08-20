@@ -1,8 +1,50 @@
-﻿@{
+﻿@using BistAdvisor.Domain.Entities
+
+@{
     ViewData["Title"] = "Dashboard";
+    var lastJobStatus = ViewData["LastJobStatus"] as JobStatus?;
+    var lastJobTime = ViewData["LastJobTime"] as DateTimeOffset?;
+    var hasTodaysBulletin = (bool)(ViewData["HasTodaysBulletin"] ?? false);
+    var recentChanges = ViewData["RecentChanges"] as List<SignalChange> ?? new List<SignalChange>();
+
+    dynamic topFive = ViewData["TopFive"]!;
+    dynamic bottomFive = ViewData["BottomFive"]!;
+
+    string PillClass(string signalType)
+    {
+        return signalType switch
+        {
+            "StrongBuy" or "Buy" => "pill-green",
+            "Sell" or "StrongSell" => "pill-red",
+            _ => "pill-gray"
+        };
+    }
+
+    string SignalLabel(string signalType)
+    {
+        return signalType switch
+        {
+            "StrongBuy" => "Güçlü Al",
+            "Buy" => "Al",
+            "Neutral" => "Nötr",
+            "Sell" => "Sat",
+            "StrongSell" => "Güçlü Sat",
+            _ => signalType
+        };
+    }
 }
 
-<h1 class="mb-4">Teknik Analiz Dashboard</h1>
+<div class="d-flex justify-content-between align-items-start flex-wrap mb-4">
+    <h1 class="mb-0">Teknik Analiz Dashboard</h1>
+    @if (hasTodaysBulletin)
+    {
+        <a href="/Bulletin" class="btn btn-success">Bugünün Bültenini Görüntüle</a>
+    }
+    else
+    {
+        <span class="text-muted small align-self-center">Bugün için henüz bülten oluşturulmadı.</span>
+    }
+</div>
 
 <div class="row g-3 mb-4">
     <div class="col-md-2">
@@ -55,14 +97,126 @@
     </div>
 </div>
 
-<p class="text-muted">
-    Son güncelleme:
-    @if (ViewData["LastUpdate"] is DateTimeOffset lastUpdate)
+<div class="row g-3 mb-4">
+    <div class="col-md-6">
+        <div class="card">
+            <div class="card-body">
+                <h6 class="text-muted mb-2">Son Veri Güncelleme Zamanı</h6>
+                <p class="mb-0">
+                    @if (ViewData["LastUpdate"] is DateTimeOffset lastUpdate)
+                    {
+                        @lastUpdate.ToLocalTime().ToString("dd.MM.yyyy HH:mm")
+                    }
+                    else
+                    {
+                        @:Henüz veri yok
+                    }
+                </p>
+            </div>
+        </div>
+    </div>
+    <div class="col-md-6">
+        <div class="card">
+            <div class="card-body">
+                <h6 class="text-muted mb-2">Veri Toplama İşleminin Durumu</h6>
+                @if (lastJobStatus.HasValue)
+                {
+                    var statusPill = lastJobStatus == JobStatus.Success ? "pill-green" : "pill-red";
+                    var statusLabel = lastJobStatus == JobStatus.Success ? "Başarılı" : "Başarısız";
+                    <span class="pill @statusPill">@statusLabel</span>
+                    <span class="text-muted small ms-2">@(lastJobTime?.ToLocalTime().ToString("dd.MM.yyyy HH:mm:ss"))</span>
+                }
+                else
+                {
+                    <span class="text-muted">Henüz çalışma kaydı yok</span>
+                }
+            </div>
+        </div>
+    </div>
+</div>
+
+<div class="row g-3 mb-4">
+    <div class="col-md-6">
+        <h5>En Yüksek Skorlu 5 Hisse</h5>
+        <table class="table-dynamic">
+            <thead>
+                <tr>
+                    <th>Hisse</th>
+                    <th>Şirket</th>
+                    <th>Skor</th>
+                    <th>Sinyal</th>
+                </tr>
+            </thead>
+            <tbody>
+                @foreach (var item in topFive)
+                {
+                    <tr>
+                        <td><a href="/Stocks/Detail/@item.Symbol" class="text-decoration-none" style="color:#0A8DD0; font-weight:600;">@item.Symbol</a></td>
+                        <td>@item.CompanyName</td>
+                        <td>@(((decimal?)item.Score)?.ToString("F2") ?? "-")</td>
+                        <td><span class="pill @PillClass(item.SignalType)">@SignalLabel(item.SignalType)</span></td>
+                    </tr>
+                }
+            </tbody>
+        </table>
+    </div>
+    <div class="col-md-6">
+        <h5>En Düşük Skorlu 5 Hisse</h5>
+        <table class="table-dynamic">
+            <thead>
+                <tr>
+                    <th>Hisse</th>
+                    <th>Şirket</th>
+                    <th>Skor</th>
+                    <th>Sinyal</th>
+                </tr>
+            </thead>
+            <tbody>
+                @foreach (var item in bottomFive)
+                {
+                    <tr>
+                        <td><a href="/Stocks/Detail/@item.Symbol" class="text-decoration-none" style="color:#0A8DD0; font-weight:600;">@item.Symbol</a></td>
+                        <td>@item.CompanyName</td>
+                        <td>@(((decimal?)item.Score)?.ToString("F2") ?? "-")</td>
+                        <td><span class="pill @PillClass(item.SignalType)">@SignalLabel(item.SignalType)</span></td>
+                    </tr>
+                }
+            </tbody>
+        </table>
+    </div>
+</div>
+
+<div class="mb-4">
+    <div class="d-flex justify-content-between align-items-center mb-2">
+        <h5 class="mb-0">Son Sinyal Değişiklikleri</h5>
+        <a href="/SignalHistory" class="small">Tümünü Gör &rarr;</a>
+    </div>
+    @if (recentChanges.Count == 0)
     {
-        @lastUpdate.ToLocalTime().ToString("dd.MM.yyyy HH:mm")
+        <div class="alert alert-info">Henüz sinyal değişikliği kaydı bulunmuyor.</div>
     }
     else
     {
-        @:Henüz veri yok
+        <table class="table-dynamic">
+            <thead>
+                <tr>
+                    <th>Tarih</th>
+                    <th>Hisse</th>
+                    <th>Önceki</th>
+                    <th>Yeni</th>
+                </tr>
+            </thead>
+            <tbody>
+                @foreach (var change in recentChanges)
+                {
+                    <tr>
+                        <td>@change.ChangeTime.ToLocalTime().ToString("dd.MM.yyyy HH:mm")</td>
+                        <td><a href="/Stocks/Detail/@change.Stock.Symbol" class="text-decoration-none" style="color:#0A8DD0; font-weight:600;">@change.Stock.Symbol</a></td>
+                        <td><span class="pill pill-gray">@SignalLabel(change.PreviousSignalType.ToString())</span></td>
+                        <td><span class="pill @PillClass(change.NewSignalType.ToString())">@SignalLabel(change.NewSignalType.ToString())</span></td>
+                    </tr>
+                }
+            </tbody>
+        </table>
     }
-</p>
+</div>
