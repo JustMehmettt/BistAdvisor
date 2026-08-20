@@ -58,9 +58,9 @@ public class BulletinService : IBulletinService
             .Where(s => latestSignals.ContainsKey(s.Id))
             .Select(s => new { Stock = s, Signal = latestSignals[s.Id] })
             .Where(x =>
-                x.Signal.SignalType is SignalType.StrongBuy or SignalType.Buy
-                    or SignalType.Sell or SignalType.StrongSell
-                || changedStockIds.Contains(x.Stock.Id))
+                changedStockIds.Contains(x.Stock.Id)
+                && x.Signal.SignalType is SignalType.StrongBuy or SignalType.Buy
+                    or SignalType.Sell or SignalType.StrongSell)
             .OrderByDescending(x => x.Signal.TotalScore)
             .ToList();
 

@@ -23,4 +23,5 @@ public class BulletinItemDto
     public decimal? LastPrice { get; set; }
     public decimal? DailyChangeRate { get; set; }
     public string ReasonText { get; set; } = string.Empty;
+    public string? PreviousSignalType { get; set; }
 }
