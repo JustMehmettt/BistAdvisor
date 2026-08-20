@@ -4,6 +4,7 @@
     var stocks = ViewData["Stocks"] as List<Stock> ?? new List<Stock>();
     var recentLogs = ViewData["RecentLogs"] as List<DataFetchLog> ?? new List<DataFetchLog>();
     var failedLogs = ViewData["FailedLogs"] as List<DataFetchLog> ?? new List<DataFetchLog>();
+    var settings = ViewData["Settings"] as List<ApplicationSetting> ?? new List<ApplicationSetting>();
 }
 
 <h1 class="mb-4">Yönetim ve Log Sayfası</h1>
@@ -32,33 +33,29 @@
     </div>
 </div>
 
-@{
-    var settings = ViewData["Settings"] as List<ApplicationSetting> ?? new List<ApplicationSetting>();
-}
-
 <h4 class="mt-5">Sistem Ayarları</h4>
-<table class="table table-sm w-auto">
+<table class="table-dynamic" style="max-width: 640px;">
     <thead>
-    <tr>
-        <th>Ayar</th>
-        <th>Değer</th>
-        <th>Açıklama</th>
-    </tr>
+        <tr>
+            <th>Ayar</th>
+            <th>Değer</th>
+            <th>Açıklama</th>
+        </tr>
     </thead>
     <tbody>
-    @foreach (var setting in settings)
-    {
-        <tr>
-            <td><code>@setting.Key</code></td>
-            <td>@setting.Value</td>
-            <td class="small text-muted">@setting.Description</td>
-        </tr>
-    }
+        @foreach (var setting in settings)
+        {
+            <tr>
+                <td><code>@setting.Key</code></td>
+                <td>@setting.Value</td>
+                <td class="small text-muted">@setting.Description</td>
+            </tr>
+        }
     </tbody>
 </table>
 
 <h4 class="mt-5">Hisse Yönetimi</h4>
-<table class="table table-sm">
+<table class="table-dynamic">
     <thead>
         <tr>
             <th>Kod</th>
@@ -74,7 +71,7 @@
                 <td>@stock.Symbol</td>
                 <td>@stock.CompanyName</td>
                 <td>
-                    <span class="badge @(stock.IsActive ? "bg-success" : "bg-secondary")" id="stock-badge-@stock.Id">
+                    <span class="pill @(stock.IsActive ? "pill-green" : "pill-gray")" id="stock-badge-@stock.Id">
                         @(stock.IsActive ? "Aktif" : "Pasif")
                     </span>
                 </td>
@@ -91,7 +88,7 @@
 </table>
 
 <h4 class="mt-5">Son Çalışan Görevler</h4>
-<table class="table table-sm">
+<table class="table-dynamic">
     <thead>
         <tr>
             <th>Hisse</th>
@@ -107,7 +104,7 @@
                 <td>@(log.Stock?.Symbol ?? "-")</td>
                 <td>@log.StartedAt.ToLocalTime().ToString("dd.MM.yyyy HH:mm:ss")</td>
                 <td>
-                    <span class="badge @(log.Status == JobStatus.Success ? "bg-success" : "bg-danger")">
+                    <span class="pill @(log.Status == JobStatus.Success ? "pill-green" : "pill-red")">
                         @log.Status
                     </span>
                 </td>
@@ -120,7 +117,7 @@
 @if (failedLogs.Count > 0)
 {
     <h4 class="mt-5 text-danger">Hatalı Görevler</h4>
-    <table class="table table-sm">
+    <table class="table-dynamic">
         <thead>
             <tr>
                 <th>Hisse</th>
@@ -194,11 +191,11 @@
                 if (data.success) {
                     if (data.isActive) {
                         badge.textContent = 'Aktif';
-                        badge.className = 'badge bg-success';
+                        badge.className = 'pill pill-green';
                         btnText.textContent = 'Pasif Yap';
                     } else {
                         badge.textContent = 'Pasif';
-                        badge.className = 'badge bg-secondary';
+                        badge.className = 'pill pill-gray';
                         btnText.textContent = 'Aktif Yap';
                     }
                 }

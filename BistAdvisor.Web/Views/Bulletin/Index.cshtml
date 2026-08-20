@@ -2,134 +2,407 @@
 @model BulletinDto?
 
 @{
-ViewData["Title"] = "Günlük Bülten";
-var availableDates = ViewData["AvailableDates"] as List<DateOnly> ?? new List<DateOnly>();
+    ViewData["Title"] = "Günlük Bülten";
+    var availableDates = ViewData["AvailableDates"] as List<DateOnly> ?? new List<DateOnly>();
+
+    string PillClass(string signalType)
+    {
+        return signalType switch
+        {
+            "StrongBuy" or "Buy" => "pill-green",
+            "Sell" or "StrongSell" => "pill-red",
+            _ => "pill-gray"
+        };
+    }
+
+    string GroupLabel(string signalType)
+    {
+        return signalType switch
+        {
+            "StrongBuy" => "Güçlü Al",
+            "Buy" => "Al",
+            "Neutral" => "Nötr",
+            "Sell" => "Sat",
+            "StrongSell" => "Güçlü Sat",
+            _ => signalType
+        };
+    }
 }
 
 <h1 class="mb-4">Günlük BIST Teknik Analiz Bülteni</h1>
 
-<form method="get" class="row g-2 mb-4" id="date-form">
-    <div class="col-md-3">
-        <input type="date" name="date" id="date-picker" class="form-control"
-               value="@(ViewData["SelectedDate"] != null ? ((DateOnly)ViewData["SelectedDate"]!).ToString("yyyy-MM-dd") : "")" />
-    </div>
-</form>
+<div class="mb-4">
+    <button type="button" class="fp-trigger" id="fp-trigger">
+        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+            <rect x="3" y="5" width="18" height="16" rx="3" stroke="#1F1F1F" stroke-width="1.6"/>
+            <path d="M8 3v4M16 3v4M3 10h18" stroke="#1F1F1F" stroke-width="1.6" stroke-linecap="round"/>
+        </svg>
+        <span id="fp-trigger-label">Tarih Seç</span>
+    </button>
 
-<script>
-    const availableDates = @Html.Raw(System.Text.Json.JsonSerializer.Serialize(availableDates.Select(d => d.ToString("yyyy-MM-dd"))));
-    const datePicker = document.getElementById('date-picker');
-    if (availableDates.length > 0) {
-        datePicker.min = availableDates[availableDates.length - 1];
-        datePicker.max = availableDates[0];
+    <div class="fp-popover" id="fp-popover">
+        <div class="fp-header">
+            <button type="button" class="fp-nav-btn" id="fp-prev" aria-label="Önceki ay">
+                <svg width="10" height="16" viewBox="0 0 10 16" fill="none"><path d="M8.5 1.5 1.5 8l7 6.5" stroke="#1F1F1F" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg>
+            </button>
+            <div class="fp-month-year" id="fp-month-year"></div>
+            <button type="button" class="fp-nav-btn" id="fp-next" aria-label="Sonraki ay">
+                <svg width="10" height="16" viewBox="0 0 10 16" fill="none"><path d="m1.5 1.5 7 6.5-7 6.5" stroke="#1F1F1F" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg>
+            </button>
+        </div>
+        <div class="fp-dow" id="fp-dow"></div>
+        <div class="fp-grid" id="fp-grid"></div>
+    </div>
+</div>
+
+<style>
+    :root {
+        --fp-blue: #0047FF;
+        --fp-text: #1F1F1F;
+        --fp-muted: rgba(0, 23, 84, 0.28);
+        --fp-bg: #F5F5F5;
     }
-    datePicker.addEventListener('input', function () {
-        if (availableDates.includes(this.value)) {
-            document.getElementById('date-form').submit();
-        }
-    });
-</script>
+
+    .fp-trigger {
+        display: inline-flex;
+        align-items: center;
+        gap: 8px;
+        background: #fff;
+        border: 1px solid #e2e2e2;
+        border-radius: 8px;
+        padding: 8px 14px;
+        font-family: 'Lexend', sans-serif;
+        font-size: 14px;
+        font-weight: 500;
+        color: var(--fp-text);
+        box-shadow: 0px 1px 2px rgba(0, 14, 51, 0.06);
+        cursor: pointer;
+    }
+
+    .fp-trigger:hover {
+        border-color: var(--fp-blue);
+    }
+
+    .fp-popover {
+        display: none;
+        position: absolute;
+        z-index: 1000;
+        margin-top: 8px;
+        background: var(--fp-bg);
+        border-radius: 12px;
+        padding: 14px;
+        box-shadow: 0 8px 24px rgba(0, 14, 51, 0.12);
+        width: 300px;
+    }
+
+    .fp-popover.open {
+        display: block;
+    }
+
+    .fp-header {
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        margin-bottom: 12px;
+    }
+
+    .fp-nav-btn {
+        width: 32px;
+        height: 32px;
+        border-radius: 50%;
+        border: none;
+        background: #fff;
+        box-shadow: 0px 1px 2px rgba(0, 14, 51, 0.08);
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        cursor: pointer;
+    }
+
+    .fp-nav-btn:disabled {
+        opacity: 0.35;
+        cursor: not-allowed;
+    }
+
+    .fp-nav-btn:not(:disabled):hover {
+        background: #eef1ff;
+    }
+
+    .fp-month-year {
+        font-family: 'Lexend', sans-serif;
+        font-weight: 700;
+        font-size: 16px;
+        color: var(--fp-text);
+        letter-spacing: -0.2px;
+    }
+
+    .fp-dow {
+        display: grid;
+        grid-template-columns: repeat(7, 1fr);
+        margin-bottom: 2px;
+    }
+
+    .fp-dow span {
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        height: 28px;
+        font-family: 'Lexend', sans-serif;
+        font-weight: 500;
+        font-size: 11px;
+        color: var(--fp-text);
+    }
+
+    .fp-grid {
+        display: grid;
+        grid-template-columns: repeat(7, 1fr);
+        gap: 2px;
+    }
+
+    .fp-day {
+        height: 32px;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        border-radius: 6px;
+        font-family: 'Lexend', sans-serif;
+        font-weight: 500;
+        font-size: 12px;
+        color: var(--fp-text);
+        background: transparent;
+        border: none;
+        cursor: default;
+    }
+
+    .fp-day.fp-outside {
+        color: var(--fp-muted);
+    }
+
+    .fp-day.fp-available {
+        background: #fff;
+        box-shadow: 0px 1px 2px rgba(0, 14, 51, 0.08);
+        cursor: pointer;
+    }
+
+    .fp-day.fp-available:hover {
+        background: #eef1ff;
+    }
+
+    .fp-day.fp-selected {
+        background: var(--fp-blue) !important;
+        color: #fff !important;
+        box-shadow: none;
+    }
+</style>
 
 @if (Model is null)
 {
-<div class="alert alert-warning">Bu tarih için bülten bulunamadı.</div>
+    <div class="alert alert-warning">Bu tarih için bülten bulunamadı.</div>
 }
 else
 {
-<div class="d-flex justify-content-between align-items-start flex-wrap mb-3">
-    <div>
-        <h4 class="mb-1">@Model.Title</h4>
-        <p class="text-muted mb-0">
-            @Model.BulletinDate.ToString("dd.MM.yyyy") &middot;
-            Oluşturulma: @Model.GeneratedAt.ToLocalTime().ToString("dd.MM.yyyy HH:mm")
-        </p>
+    <div class="d-flex justify-content-between align-items-start flex-wrap mb-3">
+        <div>
+            <h4 class="mb-1">@Model.Title</h4>
+            <p class="text-muted mb-0">
+                @Model.BulletinDate.ToString("dd.MM.yyyy") &middot;
+                Oluşturulma: @Model.GeneratedAt.ToLocalTime().ToString("dd.MM.yyyy HH:mm")
+            </p>
+        </div>
+        <span class="badge @(Model.Status == "Active" ? "bg-success" : "bg-secondary") fs-6">@Model.Status</span>
     </div>
-    <span class="badge @(Model.Status == "Active" ? "bg-success" : "bg-secondary") fs-6">@Model.Status</span>
-</div>
 
-@if (!string.IsNullOrWhiteSpace(Model.Summary))
-{
-<div class="alert alert-light border">
-    <strong>Piyasa Özeti:</strong> @Model.Summary
-</div>
-}
+    @if (!string.IsNullOrWhiteSpace(Model.Summary))
+    {
+        <div class="alert alert-light border">
+            <strong>Piyasa Özeti:</strong> @Model.Summary
+        </div>
+    }
 
-@foreach (var group in Model.Items.GroupBy(i => i.SignalType))
-{
-var headerClass = group.Key switch
-{
-"StrongBuy" => "text-success",
-"Buy" => "text-success",
-"Sell" => "text-danger",
-"StrongSell" => "text-danger",
-_ => "text-secondary"
-};
-
-var groupLabel = group.Key switch
-{
-    "StrongBuy" => "Güçlü Al",
-    "Buy" => "Al",
-    "Neutral" => "Nötr",
-    "Sell" => "Sat",
-    "StrongSell" => "Güçlü Sat",
-    _ => group.Key
-};
-
-<h5 class="mt-4 @headerClass">@groupLabel <span class="text-muted small">(@group.Count() hisse)</span></h5>
-<div class="table-responsive">
-    <table class="table table-sm table-hover align-middle">
-        <thead class="table-light">
-        <tr>
-            <th>Hisse</th>
-            <th>Şirket</th>
-            <th>Fiyat</th>
-            <th>Günlük Değişim</th>
-            <th>Skor</th>
-            <th>Güven Oranı</th>
-            <th>Değişim</th>
-            <th>Gerekçe</th>
-        </tr>
-        </thead>
-        <tbody>
-        @foreach (var item in group)
-        {
-        var changeClass = item.DailyChangeRate switch
-        {
-        > 0 => "text-success",
-        < 0 => "text-danger",
-        _ => ""
-        };
-
-        <tr>
-            <td><a href="/Stocks/Detail/@item.Symbol"><strong>@item.Symbol</strong></a></td>
-            <td>@item.CompanyName</td>
-            <td>@(item.LastPrice?.ToString("F2") ?? "-")</td>
-            <td class="@changeClass">@(item.DailyChangeRate.HasValue ? $"{item.DailyChangeRate:F2}%" : "-")</td>
-            <td>@(item.TotalScore?.ToString("F2") ?? "-")</td>
-            <td>@(item.ConfidenceRate?.ToString("F1") + "%")</td>
-            <td class="small">
-                @if (!string.IsNullOrWhiteSpace(item.PreviousSignalType))
-                {
-                    var prevLabel = item.PreviousSignalType switch
+    @foreach (var group in Model.Items.GroupBy(i => i.SignalType))
+    {
+        <h5 class="mt-4">@GroupLabel(group.Key) <span class="text-muted small">(@group.Count() hisse)</span></h5>
+        <div class="table-responsive mb-4">
+            <table class="table-dynamic">
+                <thead>
+                    <tr>
+                        <th>Hisse</th>
+                        <th>Şirket</th>
+                        <th>Fiyat</th>
+                        <th>Günlük Değişim</th>
+                        <th>Skor</th>
+                        <th>Güven Oranı</th>
+                        <th>Değişim</th>
+                        <th>Gerekçe</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    @foreach (var item in group)
                     {
-                        "StrongBuy" => "Güçlü Al",
-                        "Buy" => "Al",
-                        "Neutral" => "Nötr",
-                        "Sell" => "Sat",
-                        "StrongSell" => "Güçlü Sat",
-                        _ => item.PreviousSignalType
-                    };
-                    <span class="text-muted">@prevLabel &rarr;</span>
-                }
-                else
-                {
-                    <span class="text-muted">-</span>
-                }
-            </td>
-            <td class="small">@item.ReasonText</td>
-        </tr>
-        }
-        </tbody>
-    </table>
-</div>
+                        var changeColor = item.DailyChangeRate switch
+                        {
+                            > 0 => "#1E9E4A",
+                            < 0 => "#D6373E",
+                            _ => "#222"
+                        };
+
+                        <tr>
+                            <td><a href="/Stocks/Detail/@item.Symbol" class="text-decoration-none" style="color:#0A8DD0; font-weight:600;">@item.Symbol</a></td>
+                            <td>@item.CompanyName</td>
+                            <td>@(item.LastPrice?.ToString("F2") ?? "-")</td>
+                            <td style="color:@changeColor;">@(item.DailyChangeRate.HasValue ? $"{item.DailyChangeRate:F2}%" : "-")</td>
+                            <td>@(item.TotalScore?.ToString("F2") ?? "-")</td>
+                            <td>@(item.ConfidenceRate?.ToString("F1") + "%")</td>
+                            <td class="small">
+                                @if (!string.IsNullOrWhiteSpace(item.PreviousSignalType))
+                                {
+                                    <span class="text-muted">@GroupLabel(item.PreviousSignalType) &rarr;</span>
+                                }
+                                else
+                                {
+                                    <span class="text-muted">-</span>
+                                }
+                            </td>
+                            <td class="small">@item.ReasonText</td>
+                        </tr>
+                    }
+                </tbody>
+            </table>
+        </div>
+    }
 }
+
+@section Scripts {
+    <script>
+        (function () {
+            const availableDates = @Html.Raw(System.Text.Json.JsonSerializer.Serialize(availableDates.Select(d => d.ToString("yyyy-MM-dd"))));
+            const availableSet = new Set(availableDates);
+
+            const selectedParam = '@(ViewData["SelectedDate"] != null ? ((DateOnly)ViewData["SelectedDate"]!).ToString("yyyy-MM-dd") : "")';
+            let selectedDate = selectedParam || (availableDates.length > 0 ? availableDates[0] : null);
+
+            const dayNames = ['Pt', 'Sa', 'Ça', 'Pe', 'Cu', 'Ct', 'Pz'];
+            const monthNames = ['Ocak', 'Şubat', 'Mart', 'Nisan', 'Mayıs', 'Haziran', 'Temmuz', 'Ağustos', 'Eylül', 'Ekim', 'Kasım', 'Aralık'];
+
+            let viewYear, viewMonth;
+            if (selectedDate) {
+                const [y, m] = selectedDate.split('-').map(Number);
+                viewYear = y;
+                viewMonth = m - 1;
+            } else {
+                const now = new Date();
+                viewYear = now.getFullYear();
+                viewMonth = now.getMonth();
+            }
+
+            const trigger = document.getElementById('fp-trigger');
+            const triggerLabel = document.getElementById('fp-trigger-label');
+            const popover = document.getElementById('fp-popover');
+            const monthYearEl = document.getElementById('fp-month-year');
+            const dowEl = document.getElementById('fp-dow');
+            const gridEl = document.getElementById('fp-grid');
+            const prevBtn = document.getElementById('fp-prev');
+            const nextBtn = document.getElementById('fp-next');
+
+            dayNames.forEach(d => {
+                const span = document.createElement('span');
+                span.textContent = d;
+                dowEl.appendChild(span);
+            });
+
+            function pad(n) { return n.toString().padStart(2, '0'); }
+
+            function updateTriggerLabel() {
+                if (selectedDate) {
+                    const [y, m, d] = selectedDate.split('-');
+                    triggerLabel.textContent = `${d}.${m}.${y}`;
+                } else {
+                    triggerLabel.textContent = 'Tarih Seç';
+                }
+            }
+
+            function render() {
+                monthYearEl.textContent = `${monthNames[viewMonth]} ${viewYear}`;
+                gridEl.innerHTML = '';
+
+                const firstDay = new Date(viewYear, viewMonth, 1);
+                const startOffset = (firstDay.getDay() + 6) % 7;
+                const daysInMonth = new Date(viewYear, viewMonth + 1, 0).getDate();
+                const daysInPrevMonth = new Date(viewYear, viewMonth, 0).getDate();
+
+                const cells = [];
+
+                for (let i = startOffset - 1; i >= 0; i--) {
+                    cells.push({ day: daysInPrevMonth - i, outside: true, dateStr: null });
+                }
+                for (let d = 1; d <= daysInMonth; d++) {
+                    const dateStr = `${viewYear}-${pad(viewMonth + 1)}-${pad(d)}`;
+                    cells.push({ day: d, outside: false, dateStr });
+                }
+                while (cells.length % 7 !== 0) {
+                    cells.push({ day: cells.length - (startOffset + daysInMonth) + 1, outside: true, dateStr: null });
+                }
+
+                cells.forEach(cell => {
+                    const btn = document.createElement('button');
+                    btn.type = 'button';
+                    btn.className = 'fp-day';
+                    btn.textContent = cell.day;
+
+                    if (cell.outside) {
+                        btn.classList.add('fp-outside');
+                    } else if (availableSet.has(cell.dateStr)) {
+                        btn.classList.add('fp-available');
+                        if (cell.dateStr === selectedDate) {
+                            btn.classList.add('fp-selected');
+                        }
+                        btn.addEventListener('click', () => {
+                            window.location.href = '/Bulletin?date=' + cell.dateStr;
+                        });
+                    } else {
+                        btn.classList.add('fp-outside');
+                    }
+
+                    gridEl.appendChild(btn);
+                });
+
+                let canGoPrev = false, canGoNext = false;
+                availableDates.forEach(d => {
+                    const [y, m] = d.split('-').map(Number);
+                    const idx = y * 12 + (m - 1);
+                    const curIdx = viewYear * 12 + viewMonth;
+                    if (idx < curIdx) canGoPrev = true;
+                    if (idx > curIdx) canGoNext = true;
+                });
+                prevBtn.disabled = !canGoPrev;
+                nextBtn.disabled = !canGoNext;
+            }
+
+            prevBtn.addEventListener('click', () => {
+                viewMonth--;
+                if (viewMonth < 0) { viewMonth = 11; viewYear--; }
+                render();
+            });
+
+            nextBtn.addEventListener('click', () => {
+                viewMonth++;
+                if (viewMonth > 11) { viewMonth = 0; viewYear++; }
+                render();
+            });
+
+            trigger.addEventListener('click', (e) => {
+                e.stopPropagation();
+                popover.classList.toggle('open');
+            });
+
+            document.addEventListener('click', (e) => {
+                if (!popover.contains(e.target) && e.target !== trigger) {
+                    popover.classList.remove('open');
+                }
+            });
+
+            updateTriggerLabel();
+            render();
+        })();
+    </script>
 }

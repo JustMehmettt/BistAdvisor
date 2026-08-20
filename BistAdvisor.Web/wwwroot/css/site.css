@@ -1,0 +1,68 @@
+@import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap');
+
+.table-dynamic {
+    width: 100%;
+    background: #FCFCFC;
+    border: 1px solid #DBDBDB;
+    border-radius: 8px;
+    border-collapse: separate;
+    border-spacing: 0;
+    overflow: hidden;
+    font-family: 'Poppins', sans-serif;
+}
+
+.table-dynamic thead th {
+    background: #FCFCFC;
+    color: #222222;
+    font-weight: 500;
+    font-size: 14px;
+    padding: 16px 14px;
+    border-right: 1.2px solid #DBDBDB;
+    border-bottom: 1.6px solid #DBDBDB;
+    white-space: nowrap;
+}
+
+.table-dynamic thead th:last-child {
+    border-right: none;
+}
+
+.table-dynamic tbody td {
+    background: #FCFCFC;
+    padding: 16px 14px;
+    border-right: 1.2px solid #DBDBDB;
+    border-bottom: 1.6px solid #DBDBDB;
+    font-size: 14px;
+    font-weight: 400;
+    color: #222222;
+    vertical-align: middle;
+}
+
+.table-dynamic tbody td:last-child {
+    border-right: none;
+}
+
+.table-dynamic tbody tr:last-child td {
+    border-bottom: none;
+}
+
+.table-dynamic tbody tr:hover td {
+    background: #F5F5F5;
+}
+
+.pill {
+    display: inline-flex;
+    align-items: center;
+    padding: 5px 12px;
+    border-radius: 6px;
+    font-family: 'Poppins', sans-serif;
+    font-size: 13px;
+    font-weight: 500;
+    color: #222222;
+    white-space: nowrap;
+}
+
+.pill-green  { background: #D4F8D3; }
+.pill-red    { background: #FBE7E9; }
+.pill-purple { background: #EDE7FB; }
+.pill-yellow { background: #FFF0BB; }
+.pill-gray   { background: #EDEDED; }

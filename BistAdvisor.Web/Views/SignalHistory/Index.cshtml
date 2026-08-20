@@ -5,6 +5,29 @@
     ViewData["Title"] = "Sinyal Geçmişi";
     var page = (int)(ViewData["Page"] ?? 1);
     var totalPages = (int)(ViewData["TotalPages"] ?? 1);
+
+    string PillClass(string signalType)
+    {
+        return signalType switch
+        {
+            "StrongBuy" or "Buy" => "pill-green",
+            "Sell" or "StrongSell" => "pill-red",
+            _ => "pill-gray"
+        };
+    }
+
+    string GroupLabel(string signalType)
+    {
+        return signalType switch
+        {
+            "StrongBuy" => "Güçlü Al",
+            "Buy" => "Al",
+            "Neutral" => "Nötr",
+            "Sell" => "Sat",
+            "StrongSell" => "Güçlü Sat",
+            _ => signalType
+        };
+    }
 }
 
 <h1 class="mb-4">Sinyal Geçmişi</h1>
@@ -28,7 +51,7 @@
 }
 else
 {
-    <table class="table table-hover table-sm">
+    <table class="table-dynamic">
         <thead>
             <tr>
                 <th>Tarih</th>
@@ -43,21 +66,12 @@ else
         <tbody>
             @foreach (var change in Model)
             {
-                var newBadgeClass = change.NewSignalType switch
-                {
-                    "StrongBuy" => "bg-success",
-                    "Buy" => "bg-success-subtle text-success",
-                    "Sell" => "bg-danger-subtle text-danger",
-                    "StrongSell" => "bg-danger",
-                    _ => "bg-secondary-subtle text-secondary"
-                };
-
                 <tr>
                     <td>@change.ChangeTime.ToLocalTime().ToString("dd.MM.yyyy HH:mm")</td>
-                    <td><a href="/Stocks/Detail/@change.Symbol"><strong>@change.Symbol</strong></a></td>
+                    <td><a href="/Stocks/Detail/@change.Symbol" class="text-decoration-none" style="color:#0A8DD0; font-weight:600;">@change.Symbol</a></td>
                     <td>@change.CompanyName</td>
-                    <td><span class="badge bg-secondary-subtle text-secondary">@change.PreviousSignalType</span></td>
-                    <td><span class="badge @newBadgeClass">@change.NewSignalType</span></td>
+                    <td><span class="pill pill-gray">@GroupLabel(change.PreviousSignalType)</span></td>
+                    <td><span class="pill @PillClass(change.NewSignalType)">@GroupLabel(change.NewSignalType)</span></td>
                     <td>@(change.PreviousScore?.ToString("F2") ?? "-")</td>
                     <td>@(change.NewScore?.ToString("F2") ?? "-")</td>
                 </tr>
@@ -67,7 +81,7 @@ else
 
     @if (totalPages > 1)
     {
-        <nav>
+        <nav class="mt-3">
             <ul class="pagination">
                 @for (var i = 1; i <= totalPages; i++)
                 {
