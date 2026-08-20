@@ -2,6 +2,7 @@
 using System.Globalization;
 using BistAdvisor.Application.Bulletins;
 using BistAdvisor.Application.Indicators;
+using BistAdvisor.Application.Jobs;
 using BistAdvisor.Application.MarketData;
 using BistAdvisor.Domain.Entities;
 using BistAdvisor.Infrastructure.Data;
@@ -20,19 +21,22 @@ public class AdminController : Controller
     private readonly ISignalService _signalService;
     private readonly IBulletinService _bulletinService;
     private readonly IMarketDataProvider _marketDataProvider;
+    private readonly IJobLockService _jobLockService;
 
     public AdminController(
         ApplicationDbContext context,
         IPriceDataService priceDataService,
         ISignalService signalService,
         IBulletinService bulletinService,
-        IMarketDataProvider marketDataProvider)
+        IMarketDataProvider marketDataProvider,
+        IJobLockService jobLockService)
     {
         _context = context;
         _priceDataService = priceDataService;
         _signalService = signalService;
         _bulletinService = bulletinService;
         _marketDataProvider = marketDataProvider;
+        _jobLockService = jobLockService;
     }
 
     public async Task<IActionResult> Index()
@@ -64,10 +68,25 @@ public class AdminController : Controller
     }
 
     [HttpPost]
-    public async Task<IActionResult> RunDataSync()
-    {
-        var stopwatch = Stopwatch.StartNew();
+public async Task<IActionResult> RunDataSync()
+{
+    var stopwatch = Stopwatch.StartNew();
+    const string jobName = "DataSyncAndSignalCalculation";
 
+    var lockAcquired = await _jobLockService.TryAcquireLockAsync(jobName);
+
+    if (!lockAcquired)
+    {
+        return Json(new
+        {
+            success = false,
+            message = "A data synchronization job is already running. Please try again shortly.",
+            durationSeconds = "0.00"
+        });
+    }
+
+    try
+    {
         var activeStocks = await _context.Stocks.Where(s => s.IsActive).ToListAsync();
 
         foreach (var stock in activeStocks)
@@ -103,16 +122,21 @@ public class AdminController : Controller
         }
 
         await _context.SaveChangesAsync();
-
-        stopwatch.Stop();
-
-        return Json(new
-        {
-            success = true,
-            message = "Data synchronization completed.",
-            durationSeconds = stopwatch.Elapsed.TotalSeconds.ToString("F2", CultureInfo.InvariantCulture)
-        });
     }
+    finally
+    {
+        await _jobLockService.ReleaseLockAsync(jobName);
+    }
+
+    stopwatch.Stop();
+
+    return Json(new
+    {
+        success = true,
+        message = "Data synchronization completed.",
+        durationSeconds = stopwatch.Elapsed.TotalSeconds.ToString("F2", CultureInfo.InvariantCulture)
+    });
+}
 
     [HttpPost]
     public async Task<IActionResult> GenerateBulletin()

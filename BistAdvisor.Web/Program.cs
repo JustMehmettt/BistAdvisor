@@ -1,12 +1,14 @@
 using BistAdvisor.Application.Bulletins;
 using BistAdvisor.Application.Dtos;
 using BistAdvisor.Application.Indicators;
+using BistAdvisor.Application.Jobs;
 using BistAdvisor.Application.MarketData;
 using BistAdvisor.Infrastructure.Bulletins;
 using BistAdvisor.Infrastructure.Data;
 using BistAdvisor.Infrastructure.MarketData;
 using Microsoft.EntityFrameworkCore;
 using BistAdvisor.Infrastructure.Indicators;
+using BistAdvisor.Infrastructure.Jobs;
 using DomainSignalType = BistAdvisor.Domain.Entities.SignalType;
 using Microsoft.AspNetCore.Mvc;
 
@@ -33,6 +35,7 @@ builder.Services.AddScoped<IMarketDataProvider, YahooMarketDataProvider>();
 builder.Services.AddScoped<IPriceDataService, PriceDataService>();
 builder.Services.AddScoped<ISignalService, SignalService>();
 builder.Services.AddScoped<IBulletinService, BulletinService>();
+builder.Services.AddScoped<IJobLockService, JobLockService>();
 
 var app = builder.Build();
 

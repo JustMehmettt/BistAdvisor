@@ -1,5 +1,6 @@
 using BistAdvisor.Application.MarketData;
 using BistAdvisor.Application.Indicators;
+using BistAdvisor.Application.Jobs;
 using BistAdvisor.Domain.Entities;
 using BistAdvisor.Infrastructure.Data;
 using Microsoft.EntityFrameworkCore;
@@ -32,29 +33,40 @@ public class Worker : BackgroundService
     }
 
     private async Task RunCycleAsync(CancellationToken stoppingToken)
+{
+    using var scope = _scopeFactory.CreateScope();
+
+    var jobLockService = scope.ServiceProvider.GetRequiredService<IJobLockService>();
+    const string jobName = "DataSyncAndSignalCalculation";
+
+    var lockAcquired = await jobLockService.TryAcquireLockAsync(jobName, stoppingToken);
+
+    if (!lockAcquired)
     {
-        using var scope = _scopeFactory.CreateScope();
-        
+        _logger.LogWarning("Could not acquire job lock '{JobName}'; another process is already running it. Skipping this cycle.", jobName);
+        return;
+    }
+
+    try
+    {
         var dbContext = scope.ServiceProvider.GetRequiredService<ApplicationDbContext>();
         var priceDataService = scope.ServiceProvider.GetRequiredService<IPriceDataService>();
         var signalService = scope.ServiceProvider.GetRequiredService<ISignalService>();
-        
+
         var activeStocks = await dbContext.Stocks
             .Where(s => s.IsActive)
             .ToListAsync(stoppingToken);
 
         foreach (var stock in activeStocks)
         {
-            var startedAt = DateTimeOffset.UtcNow;
-
             var log = new DataFetchLog
             {
-                JobName = "DataSyncAndSignalCalculation",
+                JobName = jobName,
                 StockId = stock.Id,
-                StartedAt = startedAt,
+                StartedAt = DateTimeOffset.UtcNow,
                 Status = JobStatus.Success
             };
-            
+
             try
             {
                 var insertedCount = await priceDataService.SyncHistoricalDataAsync(
@@ -62,13 +74,13 @@ public class Worker : BackgroundService
                     DateTimeOffset.UtcNow.AddDays(-90),
                     DateTimeOffset.UtcNow,
                     stoppingToken);
-                
+
                 await signalService.CalculateAndSaveSignalAsync(stock.Symbol, stoppingToken);
-                
+
                 log.InsertedRowCount = insertedCount;
                 log.Status = JobStatus.Success;
                 log.CompletedAt = DateTimeOffset.UtcNow;
-                
+
                 _logger.LogInformation("Successfully processed {Symbol}", stock.Symbol);
             }
             catch (Exception ex)
@@ -76,7 +88,7 @@ public class Worker : BackgroundService
                 log.Status = JobStatus.Failed;
                 log.ErrorMessage = ex.Message;
                 log.CompletedAt = DateTimeOffset.UtcNow;
-                
+
                 _logger.LogError(ex, "Failed to process {Symbol}, continuing with next stock", stock.Symbol);
             }
             finally
@@ -84,7 +96,12 @@ public class Worker : BackgroundService
                 dbContext.DataFetchLogs.Add(log);
             }
         }
-        
+
         await dbContext.SaveChangesAsync(stoppingToken);
     }
+    finally
+    {
+        await jobLockService.ReleaseLockAsync(jobName, stoppingToken);
+    }
+}
 }

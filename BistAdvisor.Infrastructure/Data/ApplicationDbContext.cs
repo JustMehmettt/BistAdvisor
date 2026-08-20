@@ -19,6 +19,7 @@ public class ApplicationDbContext : DbContext
     public DbSet<DataFetchLog> DataFetchLogs => Set<DataFetchLog>();
     public DbSet<MarketDataRawLog> MarketDataRawLogs => Set<MarketDataRawLog>();
     public DbSet<ApplicationSetting> ApplicationSettings => Set<ApplicationSetting>();
+    public DbSet<JobLock> JobLocks => Set<JobLock>();
     
     protected override void OnModelCreating(ModelBuilder modelBuilder)
     {
@@ -151,6 +152,12 @@ public class ApplicationDbContext : DbContext
             entity.HasIndex(s => s.Key).IsUnique();
             entity.Property(s => s.Key).HasMaxLength(100).IsRequired();
             entity.Property(s => s.Value).HasMaxLength(50).IsRequired();
+        });
+
+        modelBuilder.Entity<JobLock>(entity =>
+        {
+            entity.HasIndex(l => l.JobName).IsUnique();
+            entity.Property(l => l.JobName).HasMaxLength(100).IsRequired();
         });
     }
 }
