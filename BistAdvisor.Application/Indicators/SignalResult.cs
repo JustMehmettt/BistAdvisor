@@ -7,7 +7,10 @@ public enum SignalType
     Neutral,
     Sell,
     StrongSell,
-    InsufficientData
+    InsufficientData,
+    StaleData,
+    DataUnavailable,
+    CalculationError
 }
 
 public class SignalResult
