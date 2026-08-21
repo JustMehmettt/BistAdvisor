@@ -73,7 +73,13 @@ public class StocksController : Controller
             .OrderByDescending(s => s.CreatedAt)
             .Take(20)
             .ToListAsync();
-
+        
+        var indicatorResults = await _context.IndicatorResults
+            .Where(r => r.StockId == stock.Id && r.Interval == PriceInterval.Daily)
+            .OrderBy(r => r.BarTime)
+            .Take(90)
+            .ToListAsync();
+        
         var latestSignal = signalSnapshots.FirstOrDefault();
 
         var detail = new StockDetailDto
@@ -88,7 +94,14 @@ public class StocksController : Controller
             Explanation = latestSignal?.Explanation,
             LastUpdate = latestSignal?.CreatedAt,
             PriceHistory = priceBars
-                .Select(p => new PricePointDto { Date = p.BarTime, Close = p.ClosePrice })
+                .Select(p => new PricePointDto
+                {
+                    Date = p.BarTime,
+                    Open = p.OpenPrice,
+                    High = p.HighPrice,
+                    Low = p.LowPrice,
+                    Close = p.ClosePrice,
+                })
                 .ToList(),
             SignalHistory = signalSnapshots
                 .Select(s => new SignalHistoryItemDto
@@ -96,6 +109,23 @@ public class StocksController : Controller
                     Date = s.CreatedAt,
                     SignalType = s.SignalType.ToString(),
                     TotalScore = s.TotalScore
+                })
+                .ToList(),
+            IndicatorHistory = indicatorResults
+                .Select(r => new IndicatorPointDto
+                {
+                    Date = r.BarTime,
+                    RsiValue = r.RsiValue,
+                    MacdValue = r.MacdValue,
+                    MacdSignalValue = r.MacdSignalValue,
+                    MacdHistogramValue = r.MacdHistogramValue,
+                    Ema20 = r.Ema20,
+                    Ema50 = r.Ema50,
+                    BollingerUpper = r.BollingerUpper,
+                    BollingerMiddle = r.BollingerMiddle,
+                    BollingerLower = r.BollingerLower,
+                    StochasticK = r.StochasticK,
+                    StochasticD = r.StochasticD
                 })
                 .ToList()
         };
