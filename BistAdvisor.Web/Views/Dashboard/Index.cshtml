@@ -212,7 +212,7 @@
                     <tr>
                         <td>@change.ChangeTime.ToLocalTime().ToString("dd.MM.yyyy HH:mm")</td>
                         <td><a href="/Stocks/Detail/@change.Stock.Symbol" class="text-decoration-none" style="color:#0A8DD0; font-weight:600;">@change.Stock.Symbol</a></td>
-                        <td><span class="pill pill-gray">@SignalLabel(change.PreviousSignalType.ToString())</span></td>
+                        <td><span class="pill @PillClass(change.PreviousSignalType.ToString())">@SignalLabel(change.PreviousSignalType.ToString())</span></td>
                         <td><span class="pill @PillClass(change.NewSignalType.ToString())">@SignalLabel(change.NewSignalType.ToString())</span></td>
                     </tr>
                 }
