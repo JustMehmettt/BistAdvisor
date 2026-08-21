@@ -2,17 +2,36 @@
 @model StockDetailDto
 
 @{
-    ViewData["Title"] = $"{Model.Symbol} - Detay";
+ViewData["Title"] = $"{Model.Symbol} - Detay";
 
-    var badgeClass = Model.SignalType switch
-    {
-        "StrongBuy" => "pill-green",
-        "Buy" => "pill-green",
-        "Sell" => "pill-red",
-        "StrongSell" => "pill-red",
-        _ => "pill-gray"
-    };
+var badgeClass = Model.SignalType switch
+{
+"StrongBuy" => "pill-green",
+"Buy" => "pill-green",
+"Sell" => "pill-red",
+"StrongSell" => "pill-red",
+_ => "pill-gray"
+};
 }
+
+<link href="https://fonts.googleapis.com/css2?family=Roboto:wght@400;600&display=swap" rel="stylesheet">
+<style>
+    .chartjs-card {
+        background: #fff;
+        border: 1px solid #E5E5E5;
+        border-radius: 8px;
+        padding: 20px;
+        font-family: 'Roboto', sans-serif;
+    }
+    .chartjs-card h6 {
+        font-family: 'Roboto', sans-serif;
+        font-weight: 600;
+        font-size: 14px;
+        color: #474747;
+        text-align: center;
+        margin-bottom: 12px;
+    }
+</style>
 
 <div class="d-flex justify-content-between align-items-start mb-4">
     <div>
@@ -59,24 +78,82 @@
 
 @if (!string.IsNullOrWhiteSpace(Model.Explanation))
 {
-    <div class="alert alert-light border">
-        <strong>Sinyal Gerekçesi:</strong> @Model.Explanation
-    </div>
+<div class="alert alert-light border">
+    <strong>Sinyal Gerekçesi:</strong> @Model.Explanation
+</div>
 }
 
-<h4 class="mt-4">Fiyat Grafiği</h4>
-<div style="background:#FCFCFC; border-radius:8px; padding:16px;">
+<h4 class="mt-4">Fiyat Grafiği (Mum Grafiği)</h4>
+<div class="chartjs-card">
     <canvas id="priceChart" height="90"></canvas>
+</div>
+
+<h4 class="mt-4">EMA / Bollinger Bantları</h4>
+<div class="chartjs-card">
+    <canvas id="emaChart" height="90"></canvas>
+</div>
+
+<div class="row mt-5">
+    <div class="col-md-6">
+        <div class="chartjs-card">
+            <h6>RSI</h6>
+            <canvas id="rsiChart" height="140"></canvas>
+        </div>
+    </div>
+    <div class="col-md-6">
+        <div class="chartjs-card">
+            <h6>Stochastic Oscillator</h6>
+            <canvas id="stochasticChart" height="140"></canvas>
+        </div>
+    </div>
 </div>
 
 <div class="row mt-4">
     <div class="col-md-6">
-        <h5>MACD</h5>
-        <canvas id="macdChart" height="120"></canvas>
+        <div class="chartjs-card h-100">
+            <h6>MACD</h6>
+            <canvas id="macdChart" height="140"></canvas>
+        </div>
     </div>
     <div class="col-md-6">
-        <h5>İndikatör Bazlı Puan Dağılımı</h5>
-        <canvas id="scoreChart" height="120"></canvas>
+        <div class="chartjs-card h-100">
+            <h6>İndikatör Bazlı Puan Dağılımı</h6>
+            <table class="table-dynamic">
+                <thead>
+                <tr>
+                    <th>İndikatör</th>
+                    <th>Puan</th>
+                </tr>
+                </thead>
+                <tbody>
+                @{
+                    var scoreRows = new (string Name, int? Score)[]
+                    {
+                        ("RSI", Model.RsiScore),
+                        ("MACD", Model.MacdScore),
+                        ("EMA", Model.EmaScore),
+                        ("Bollinger", Model.BollingerScore),
+                        ("Stochastic", Model.StochasticScore)
+                    };
+                }
+                @foreach (var row in scoreRows)
+                {
+                    var rowClass = row.Score switch
+                    {
+                        > 0 => "pill-green",
+                        < 0 => "pill-red",
+                        0 => "pill-gray",
+                        _ => "pill-gray"
+                    };
+
+                    <tr>
+                        <td>@row.Name</td>
+                        <td><span class="pill @rowClass">@(row.Score?.ToString() ?? "-")</span></td>
+                    </tr>
+                }
+                </tbody>
+            </table>
+        </div>
     </div>
 </div>
 
@@ -92,132 +169,151 @@
     <tbody>
     @foreach (var item in Model.SignalHistory)
     {
-        <tr>
-            <td>@item.Date.ToLocalTime().ToString("dd.MM.yyyy HH:mm")</td>
-            <td>@item.SignalType</td>
-            <td>@(item.TotalScore?.ToString("F2") ?? "-")</td>
-        </tr>
+    <tr>
+        <td>@item.Date.ToLocalTime().ToString("dd.MM.yyyy HH:mm")</td>
+        <td>@item.SignalType</td>
+        <td>@(item.TotalScore?.ToString("F2") ?? "-")</td>
+    </tr>
     }
     </tbody>
 </table>
 
 @section Scripts {
-    <script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.5.0/chart.umd.min.js"></script>
-    <script src="https://cdn.jsdelivr.net/npm/chartjs-adapter-date-fns/dist/chartjs-adapter-date-fns.bundle.min.js"></script>
-    <script src="https://cdn.jsdelivr.net/npm/chartjs-chart-financial/dist/chartjs-chart-financial.min.js"></script>
-    <script>
-        const candleData = @Html.Raw(System.Text.Json.JsonSerializer.Serialize(
-        Model.PriceHistory.Select(p => new {
-        x = p.Date.ToUnixTimeMilliseconds(),
-        o = p.Open,
-        h = p.High,
-        l = p.Low,
-        c = p.Close
-        })));
+<script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.5.0/chart.umd.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/chartjs-adapter-date-fns/dist/chartjs-adapter-date-fns.bundle.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/chartjs-chart-financial/dist/chartjs-chart-financial.min.js"></script>
+<script>
+    const candleData = @Html.Raw(System.Text.Json.JsonSerializer.Serialize(
+    Model.PriceHistory.Select(p => new {
+    x = p.Date.ToUnixTimeMilliseconds(),
+    o = p.Open,
+    h = p.High,
+    l = p.Low,
+    c = p.Close
+    })));
 
-        new Chart(document.getElementById('priceChart'), {
-            type: 'candlestick',
-            data: {
-                datasets: [{
-                    label: '@Model.Symbol',
-                    data: candleData,
-                    color: {
-                        up: '#27AE60',
-                        down: '#EB5757',
-                        unchanged: '#949499'
-                    },
-                    borderColor: {
-                        up: '#27AE60',
-                        down: '#EB5757',
-                        unchanged: '#949499'
-                    }
-                }]
-            },
-            options: {
-                responsive: true,
-                plugins: {
-                    legend: {display: false}
-                },
-                scales: {
-                    x: {
-                        type: 'time',
-                        time: {unit: 'day'},
-                        ticks: {color: '#222222'},
-                        grid: {color: 'rgba(0,0,0,0.06)'}
-                    },
-                    y: {
-                        ticks: {color: '#222222'},
-                        grid: {color: 'rgba(0,0,0,0.06)'}
-                    }
-                }
-            }
-        });
+    const indicatorLabels = @Html.Raw(System.Text.Json.JsonSerializer.Serialize(
+    Model.IndicatorHistory.Select(p => p.Date.ToUnixTimeMilliseconds())));
+    const ema20Data = @Html.Raw(System.Text.Json.JsonSerializer.Serialize(
+    Model.IndicatorHistory.Select(p => p.Ema20)));
+    const ema50Data = @Html.Raw(System.Text.Json.JsonSerializer.Serialize(
+    Model.IndicatorHistory.Select(p => p.Ema50)));
+    const bollUpperData = @Html.Raw(System.Text.Json.JsonSerializer.Serialize(
+    Model.IndicatorHistory.Select(p => p.BollingerUpper)));
+    const bollMiddleData = @Html.Raw(System.Text.Json.JsonSerializer.Serialize(
+    Model.IndicatorHistory.Select(p => p.BollingerMiddle)));
+    const bollLowerData = @Html.Raw(System.Text.Json.JsonSerializer.Serialize(
+    Model.IndicatorHistory.Select(p => p.BollingerLower)));
+    const rsiData = @Html.Raw(System.Text.Json.JsonSerializer.Serialize(
+    Model.IndicatorHistory.Select(p => p.RsiValue)));
+    const macdLineData = @Html.Raw(System.Text.Json.JsonSerializer.Serialize(
+    Model.IndicatorHistory.Select(p => p.MacdValue)));
+    const macdSignalData = @Html.Raw(System.Text.Json.JsonSerializer.Serialize(
+    Model.IndicatorHistory.Select(p => p.MacdSignalValue)));
+    const macdHistogramData = @Html.Raw(System.Text.Json.JsonSerializer.Serialize(
+    Model.IndicatorHistory.Select(p => p.MacdHistogramValue)));
+    const stochKData = @Html.Raw(System.Text.Json.JsonSerializer.Serialize(
+    Model.IndicatorHistory.Select(p => p.StochasticK)));
+    const stochDData = @Html.Raw(System.Text.Json.JsonSerializer.Serialize(
+    Model.IndicatorHistory.Select(p => p.StochasticD)));
 
-        new Chart(document.getElementById('rsiChart'), {
-            type: 'line',
-            data: {
-                labels: indicatorLabels,
-                datasets: [{ label: 'RSI', data: rsiData, borderColor: '#0A8DD0', pointRadius: 0, borderWidth: 2, tension: 0.2 }]
-            },
-            options: {
-                responsive: true,
-                plugins: { legend: { display: false } },
-                scales: { y: { min: 0, max: 100, ticks: { stepSize: 10 } } }
-            }
-        });
+    function toTimeSeries(values) {
+        return values.map((v, i) => ({ x: indicatorLabels[i], y: v }));
+    }
 
-        new Chart(document.getElementById('stochasticChart'), {
-            type: 'line',
-            data: {
-                labels: indicatorLabels,
-                datasets: [
-                    { label: '%K', data: stochKData, borderColor: '#0A8DD0', pointRadius: 0, borderWidth: 2, tension: 0.2 },
-                    { label: '%D', data: stochDData, borderColor: '#F5A623', pointRadius: 0, borderWidth: 2, tension: 0.2 }
-                ]
-            },
-            options: {
-                responsive: true,
-                plugins: { legend: { display: true, position: 'bottom' } },
-                scales: { y: { min: 0, max: 100, ticks: { stepSize: 10 } } }
-            }
-        });
+    Chart.defaults.font.family = 'Roboto';
+    Chart.defaults.color = '#474747';
 
-        new Chart(document.getElementById('macdChart'), {
-            data: {
-                labels: indicatorLabels,
-                datasets: [
-                    { type: 'bar', label: 'Histogram', data: macdHistogramData, backgroundColor: '#DBDBDB' },
-                    { type: 'line', label: 'MACD', data: macdLineData, borderColor: '#0A8DD0', pointRadius: 0, borderWidth: 2, tension: 0.2 },
-                    { type: 'line', label: 'Sinyal', data: macdSignalData, borderColor: '#D6373E', pointRadius: 0, borderWidth: 2, tension: 0.2 }
-                ]
-            },
-            options: { responsive: true, plugins: { legend: { display: true, position: 'bottom' } } }
-        });
-        
-        new Chart(document.getElementById('scoreChart'), {
-            type: 'bar',
-            data: {
-                labels: ['RSI', 'MACD', 'EMA', 'Bollinger', 'Stochastic'],
-                datasets: [{
-                    label: 'Puan',
-                    data: [
-                        @(Model.RsiScore ?? 0), @(Model.MacdScore ?? 0), @(Model.EmaScore ?? 0),
-                        @(Model.BollingerScore ?? 0), @(Model.StochasticScore ?? 0)
-                    ],
-                    backgroundColor: [
-                        @(Model.RsiScore ?? 0) >= 0 ? "'#D4F8D3'" : "'#FBE7E9'",
-                        @(Model.MacdScore ?? 0) >= 0 ? "'#D4F8D3'" : "'#FBE7E9'",
-                        @(Model.EmaScore ?? 0) >= 0 ? "'#D4F8D3'" : "'#FBE7E9'",
-                        @(Model.BollingerScore ?? 0) >= 0 ? "'#D4F8D3'" : "'#FBE7E9'",
-                        @(Model.StochasticScore ?? 0) >= 0 ? "'#D4F8D3'" : "'#FBE7E9'"
-                    ]
-                }]
-            },
-            options: {
-                responsive: true,
-                plugins: { legend: { display: false } },
-                scales: { y: { min: -2, max: 2, ticks: { stepSize: 1 } } }
+    new Chart(document.getElementById('priceChart'), {
+        type: 'candlestick',
+        data: {
+            datasets: [{
+                label: '@Model.Symbol',
+                data: candleData,
+                color: { up: '#27AE60', down: '#EB5757', unchanged: '#949499' },
+                borderColor: { up: '#27AE60', down: '#EB5757', unchanged: '#949499' }
+            }]
+        },
+        options: {
+            responsive: true,
+            plugins: { legend: { display: false } },
+            scales: {
+                x: { type: 'time', time: { unit: 'day' }, grid: { color: '#B0B0B0' } },
+                y: { grid: { color: '#B0B0B0' } }
             }
-        });
-    </script>
+        }
+    });
+
+    new Chart(document.getElementById('emaChart'), {
+        type: 'line',
+        data: {
+            datasets: [
+                { label: 'EMA20', data: toTimeSeries(ema20Data), borderColor: '#FBE38E', backgroundColor: '#FBE38E', pointRadius: 3, pointBackgroundColor: '#FBE38E', borderWidth: 2, tension: 0.2 },
+                { label: 'EMA50', data: toTimeSeries(ema50Data), borderColor: '#9A89FF', backgroundColor: '#9A89FF', pointRadius: 3, pointBackgroundColor: '#9A89FF', borderWidth: 2, tension: 0.2 },
+                { label: 'Bollinger Üst', data: toTimeSeries(bollUpperData), borderColor: '#EB5757', pointRadius: 0, borderDash: [4, 4], borderWidth: 1, tension: 0.2 },
+                { label: 'Bollinger Orta', data: toTimeSeries(bollMiddleData), borderColor: '#B0B0B0', pointRadius: 0, borderDash: [4, 4], borderWidth: 1, tension: 0.2 },
+                { label: 'Bollinger Alt', data: toTimeSeries(bollLowerData), borderColor: '#27AE60', pointRadius: 0, borderDash: [4, 4], borderWidth: 1, tension: 0.2 }
+            ]
+        },
+        options: {
+            responsive: true,
+            plugins: { legend: { display: true, position: 'bottom', labels: { font: { size: 12 } } } },
+            scales: {
+                x: { type: 'time', time: { unit: 'day' }, grid: { color: '#B0B0B0' } },
+                y: { grid: { color: '#B0B0B0' } }
+            }
+        }
+    });
+
+    new Chart(document.getElementById('rsiChart'), {
+        type: 'line',
+        data: {
+            datasets: [{ label: 'RSI', data: toTimeSeries(rsiData), borderColor: '#9A89FF', backgroundColor: '#9A89FF', pointRadius: 3, pointBackgroundColor: '#9A89FF', borderWidth: 2, tension: 0.2 }]
+        },
+        options: {
+            responsive: true,
+            plugins: { legend: { display: false } },
+            scales: {
+                x: { type: 'time', time: { unit: 'day' }, grid: { color: '#B0B0B0' } },
+                y: { min: 0, max: 100, ticks: { stepSize: 10 }, grid: { color: '#B0B0B0' } }
+            }
+        }
+    });
+
+    new Chart(document.getElementById('stochasticChart'), {
+        type: 'line',
+        data: {
+            datasets: [
+                { label: '%K', data: toTimeSeries(stochKData), borderColor: '#FBE38E', backgroundColor: '#FBE38E', pointRadius: 3, pointBackgroundColor: '#FBE38E', borderWidth: 2, tension: 0.2 },
+                { label: '%D', data: toTimeSeries(stochDData), borderColor: '#9A89FF', backgroundColor: '#9A89FF', pointRadius: 3, pointBackgroundColor: '#9A89FF', borderWidth: 2, tension: 0.2 }
+            ]
+        },
+        options: {
+            responsive: true,
+            plugins: { legend: { display: true, position: 'bottom' } },
+            scales: {
+                x: { type: 'time', time: { unit: 'day' }, grid: { color: '#B0B0B0' } },
+                y: { min: 0, max: 100, ticks: { stepSize: 10 }, grid: { color: '#B0B0B0' } }
+            }
+        }
+    });
+
+    new Chart(document.getElementById('macdChart'), {
+        data: {
+            datasets: [
+                { type: 'bar', label: 'Histogram', data: toTimeSeries(macdHistogramData), backgroundColor: '#B0B0B0' },
+                { type: 'line', label: 'MACD', data: toTimeSeries(macdLineData), borderColor: '#9A89FF', pointRadius: 0, borderWidth: 2, tension: 0.2 },
+                { type: 'line', label: 'Sinyal', data: toTimeSeries(macdSignalData), borderColor: '#EB5757', pointRadius: 0, borderWidth: 2, tension: 0.2 }
+            ]
+        },
+        options: {
+            responsive: true,
+            plugins: { legend: { display: true, position: 'bottom' } },
+            scales: {
+                x: { type: 'time', time: { unit: 'day' }, grid: { color: '#B0B0B0' } },
+                y: { grid: { color: '#B0B0B0' } }
+            }
+        }
+    });
+</script>
 }

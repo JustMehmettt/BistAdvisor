@@ -57,4 +57,18 @@ public class StochasticOscillatorCalculator
             PercentD = Math.Round(percentD, 4)
         };
     }
+    
+    public List<StochasticResult> CalculateSeries(IReadOnlyList<PriceBar> priceBars)
+    {
+        var orderedBars = priceBars.OrderBy(p => p.BarTime).ToList();
+        var result = new List<StochasticResult>();
+
+        for (var i = 0; i < orderedBars.Count; i++)
+        {
+            var window = orderedBars.Take(i + 1).ToList();
+            result.Add(Calculate(window));
+        }
+
+        return result;
+    }
 }

@@ -1,4 +1,5 @@
 ﻿using BistAdvisor.Application.Dtos;
+using BistAdvisor.Application.Indicators;
 using BistAdvisor.Domain.Entities;
 using BistAdvisor.Infrastructure.Data;
 using Microsoft.AspNetCore.Mvc;
@@ -73,14 +74,39 @@ public class StocksController : Controller
             .OrderByDescending(s => s.CreatedAt)
             .Take(20)
             .ToListAsync();
-        
-        var indicatorResults = await _context.IndicatorResults
-            .Where(r => r.StockId == stock.Id && r.Interval == PriceInterval.Daily)
-            .OrderBy(r => r.BarTime)
-            .Take(90)
-            .ToListAsync();
-        
+
         var latestSignal = signalSnapshots.FirstOrDefault();
+
+        var rsiSeries = new RsiCalculator().CalculateSeries(priceBars);
+        var macdSeries = new MacdCalculator().CalculateSeries(priceBars);
+        var bollingerSeries = new BollingerBandsCalculator().CalculateSeries(priceBars);
+        var stochasticSeries = new StochasticOscillatorCalculator().CalculateSeries(priceBars);
+
+        var closePrices = priceBars.Select(p => p.ClosePrice).ToList();
+        var ema20Raw = EmaCalculator.CalculateSeries(closePrices, 20);
+        var ema50Raw = EmaCalculator.CalculateSeries(closePrices, 50);
+        var ema20Padded = PadSeries(ema20Raw, priceBars.Count);
+        var ema50Padded = PadSeries(ema50Raw, priceBars.Count);
+
+        var indicatorHistory = new List<IndicatorPointDto>();
+        for (var i = 0; i < priceBars.Count; i++)
+        {
+            indicatorHistory.Add(new IndicatorPointDto
+            {
+                Date = priceBars[i].BarTime,
+                RsiValue = rsiSeries[i],
+                MacdValue = macdSeries[i].MacdLine,
+                MacdSignalValue = macdSeries[i].SignalLine,
+                MacdHistogramValue = macdSeries[i].Histogram,
+                Ema20 = ema20Padded[i],
+                Ema50 = ema50Padded[i],
+                BollingerUpper = bollingerSeries[i].UpperBand,
+                BollingerMiddle = bollingerSeries[i].MiddleBand,
+                BollingerLower = bollingerSeries[i].LowerBand,
+                StochasticK = stochasticSeries[i].PercentK,
+                StochasticD = stochasticSeries[i].PercentD
+            });
+        }
 
         var detail = new StockDetailDto
         {
@@ -93,6 +119,11 @@ public class StocksController : Controller
             ConfidenceRate = latestSignal?.ConfidenceRate,
             Explanation = latestSignal?.Explanation,
             LastUpdate = latestSignal?.CreatedAt,
+            RsiScore = latestSignal?.RsiScore,
+            MacdScore = latestSignal?.MacdScore,
+            EmaScore = latestSignal?.EmaScore,
+            BollingerScore = latestSignal?.BollingerScore,
+            StochasticScore = latestSignal?.StochasticScore,
             PriceHistory = priceBars
                 .Select(p => new PricePointDto
                 {
@@ -100,7 +131,7 @@ public class StocksController : Controller
                     Open = p.OpenPrice,
                     High = p.HighPrice,
                     Low = p.LowPrice,
-                    Close = p.ClosePrice,
+                    Close = p.ClosePrice
                 })
                 .ToList(),
             SignalHistory = signalSnapshots
@@ -111,26 +142,18 @@ public class StocksController : Controller
                     TotalScore = s.TotalScore
                 })
                 .ToList(),
-            IndicatorHistory = indicatorResults
-                .Select(r => new IndicatorPointDto
-                {
-                    Date = r.BarTime,
-                    RsiValue = r.RsiValue,
-                    MacdValue = r.MacdValue,
-                    MacdSignalValue = r.MacdSignalValue,
-                    MacdHistogramValue = r.MacdHistogramValue,
-                    Ema20 = r.Ema20,
-                    Ema50 = r.Ema50,
-                    BollingerUpper = r.BollingerUpper,
-                    BollingerMiddle = r.BollingerMiddle,
-                    BollingerLower = r.BollingerLower,
-                    StochasticK = r.StochasticK,
-                    StochasticD = r.StochasticD
-                })
-                .ToList()
+            IndicatorHistory = indicatorHistory
         };
 
         return View(detail);
+    }
+
+    private static List<decimal?> PadSeries(List<decimal> series, int totalLength)
+    {
+        var offset = totalLength - series.Count;
+        var padded = new List<decimal?>(new decimal?[Math.Max(offset, 0)]);
+        padded.AddRange(series.Select(v => (decimal?)v));
+        return padded;
     }
 
     private async Task<List<StockListItemDto>> GetStockListAsync(
@@ -173,7 +196,7 @@ public class StocksController : Controller
         }
 
         if (!string.IsNullOrWhiteSpace(signalType) &&
-            Enum.TryParse<SignalType>(signalType, true, out var parsedType))
+            Enum.TryParse<Domain.Entities.SignalType>(signalType, true, out var parsedType))
         {
             combined = combined.Where(x => x.Signal != null && x.Signal.SignalType == parsedType);
         }

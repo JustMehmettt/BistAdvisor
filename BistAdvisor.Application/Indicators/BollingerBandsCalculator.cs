@@ -45,4 +45,18 @@ public class BollingerBandsCalculator
             CurrentPrice = orderedBars[^1].ClosePrice
         };
     }
+    
+    public List<BollingerBandsResult> CalculateSeries(IReadOnlyList<PriceBar> priceBars)
+    {
+        var orderedBars = priceBars.OrderBy(p => p.BarTime).ToList();
+        var result = new List<BollingerBandsResult>();
+
+        for (var i = 0; i < orderedBars.Count; i++)
+        {
+            var window = orderedBars.Take(i + 1).ToList();
+            result.Add(Calculate(window));
+        }
+
+        return result;
+    }
 }

@@ -69,8 +69,6 @@ public class MacdCalculator
              histogramStrengthening = Math.Abs(histogram) > Math.Abs(previousHistogram);
          }
          
-         
-         
          return new MacdResult
          {
              MacdLine = Math.Round(macdLine, 4),
@@ -80,5 +78,19 @@ public class MacdCalculator
              BearishCrossover = bearishCrossover,
              HistogramStrengthening = histogramStrengthening
          };
+     }
+     
+     public List<MacdResult> CalculateSeries(IReadOnlyList<PriceBar> priceBars)
+     {
+         var orderedBars = priceBars.OrderBy(p => p.BarTime).ToList();
+         var result = new List<MacdResult>();
+
+         for (var i = 0; i < orderedBars.Count; i++)
+         {
+             var window = orderedBars.Take(i + 1).ToList();
+             result.Add(Calculate(window));
+         }
+
+         return result;
      }
 }

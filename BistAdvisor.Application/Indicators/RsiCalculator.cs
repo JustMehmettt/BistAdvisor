@@ -46,4 +46,18 @@ public class RsiCalculator
 
         return Math.Round(rsi, 2);
     }
+    
+    public List<decimal?> CalculateSeries(IReadOnlyList<PriceBar> priceBars)
+    {
+        var orderedBars = priceBars.OrderBy(p => p.BarTime).ToList();
+        var result = new List<decimal?>();
+
+        for (var i = 0; i < orderedBars.Count; i++)
+        {
+            var window = orderedBars.Take(i + 1).ToList();
+            result.Add(Calculate(window));
+        }
+
+        return result;
+    }
 }
