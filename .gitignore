@@ -61,3 +61,5 @@ nunit-*.xml
 appsettings.Development.json
 
 *.DotSettings.user
+
+logs/

@@ -7,18 +7,38 @@ using BistAdvisor.Infrastructure.Jobs;
 using BistAdvisor.Infrastructure.MarketData;
 using BistAdvisor.Worker;
 using Microsoft.EntityFrameworkCore;
+using Serilog;
 
-var builder = Host.CreateApplicationBuilder(args);
+Log.Logger = new LoggerConfiguration()
+    .MinimumLevel.Information()
+    .MinimumLevel.Override("Microsoft.EntityFrameworkCore", Serilog.Events.LogEventLevel.Warning)
+    .WriteTo.Console()
+    .WriteTo.File("logs/bistadvisor-worker-.log", rollingInterval: RollingInterval.Day, retainedFileCountLimit: 14)
+    .CreateLogger();
 
-builder.Services.AddDbContext<ApplicationDbContext>(options =>
-    options.UseSqlServer(builder.Configuration.GetConnectionString("DefaultConnection")));
+try
+{
+    var builder = Host.CreateApplicationBuilder(args);
+    builder.Services.AddSerilog();
 
-builder.Services.AddScoped<IMarketDataProvider, YahooMarketDataProvider>();
-builder.Services.AddScoped<IPriceDataService, PriceDataService>();
-builder.Services.AddScoped<ISignalService, SignalService>();
-builder.Services.AddScoped<IJobLockService, JobLockService>();
+    builder.Services.AddDbContext<ApplicationDbContext>(options =>
+        options.UseSqlServer(builder.Configuration.GetConnectionString("DefaultConnection")));
 
-builder.Services.AddHostedService<Worker>();
+    builder.Services.AddScoped<IMarketDataProvider, YahooMarketDataProvider>();
+    builder.Services.AddScoped<IPriceDataService, PriceDataService>();
+    builder.Services.AddScoped<ISignalService, SignalService>();
+    builder.Services.AddScoped<IJobLockService, JobLockService>();
 
-var host = builder.Build();
-host.Run();
+    builder.Services.AddHostedService<Worker>();
+
+    var host = builder.Build();
+    host.Run();
+}
+catch (Exception ex)
+{
+    Log.Fatal(ex, "Worker terminated unexpectedly");
+}
+finally
+{
+    Log.CloseAndFlush();
+}
