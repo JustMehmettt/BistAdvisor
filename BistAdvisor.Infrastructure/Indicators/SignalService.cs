@@ -63,21 +63,28 @@ public class SignalService : ISignalService
 
         try
         {
-            var rsi = new RsiCalculator().Calculate(priceBars);
-            var macd = new MacdCalculator().Calculate(priceBars);
-            var ema = new EmaTrendCalculator().Calculate(priceBars);
-            var bollinger = new BollingerBandsCalculator().Calculate(priceBars);
-            var stochastic = new StochasticOscillatorCalculator().Calculate(priceBars);
+            var settingsDict = await _context.ApplicationSettings.ToDictionaryAsync(s => s.Key, s => s.Value, cancellationToken);
+
+            var rsi = new RsiCalculator(ParseInt(settingsDict, "Period.Rsi", 14)).Calculate(priceBars);
+            var macd = new MacdCalculator(
+                ParseInt(settingsDict, "Period.MacdFast", 12),
+                ParseInt(settingsDict, "Period.MacdSlow", 26),
+                ParseInt(settingsDict, "Period.MacdSignal", 9)).Calculate(priceBars);
+            var ema = new EmaTrendCalculator(
+                ParseInt(settingsDict, "Period.EmaShort", 20),
+                ParseInt(settingsDict, "Period.EmaLong", 50)).Calculate(priceBars);
+            var bollinger =
+                new BollingerBandsCalculator(ParseInt(settingsDict, "Period.Bollinger", 20)).Calculate(priceBars);
+            var stochastic = new StochasticOscillatorCalculator(
+                ParseInt(settingsDict, "Period.StochasticK", 14),
+                ParseInt(settingsDict, "Period.StochasticD", 3)).Calculate(priceBars);
 
             var rsiScore = IndicatorScoreCalculator.ScoreRsi(rsi);
             var macdScore = IndicatorScoreCalculator.ScoreMacd(macd);
             var emaScore = IndicatorScoreCalculator.ScoreEmaTrend(ema);
             var bollingerScore = IndicatorScoreCalculator.ScoreBollinger(bollinger);
             var stochasticScore = IndicatorScoreCalculator.ScoreStochastic(stochastic);
-
-            var settingsDict =
-                await _context.ApplicationSettings.ToDictionaryAsync(s => s.Key, s => s.Value, cancellationToken);
-
+            
             var weights = new SignalWeights
             {
                 RsiWeight = ParseDecimal(settingsDict, "Weight.Rsi", 0.20m),
@@ -281,6 +288,16 @@ public class SignalService : ISignalService
     {
         if (settings.TryGetValue(key, out var value) &&
             decimal.TryParse(value, System.Globalization.CultureInfo.InvariantCulture, out var parsed))
+        {
+            return parsed;
+        }
+
+        return defaultValue;
+    }
+    
+    private static int ParseInt(Dictionary<string, string> settings, string key, int defaultValue)
+    {
+        if (settings.TryGetValue(key, out var value) && int.TryParse(value, out var parsed))
         {
             return parsed;
         }

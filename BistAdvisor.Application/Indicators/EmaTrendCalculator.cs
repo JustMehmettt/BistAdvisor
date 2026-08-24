@@ -13,25 +13,29 @@ public class EmaTrendResult
 
 public class EmaTrendCalculator
 {
-    private const int ShortPeriod = 20;
-    private const int LongPeriod = 50;
-    
+    private readonly int _shortPeriod;
+    private readonly int _longPeriod;
+
+    public EmaTrendCalculator(int shortPeriod = 20, int longPeriod = 50)
+    {
+        _shortPeriod = shortPeriod;
+        _longPeriod = longPeriod;
+    }
+
     public EmaTrendResult Calculate(IReadOnlyList<PriceBar> priceBars)
     {
         var orderedBars = priceBars.OrderBy(p => p.BarTime).ToList();
 
-        if (orderedBars.Count < LongPeriod)
+        if (orderedBars.Count < _longPeriod)
         {
             return new EmaTrendResult();
         }
 
         var closePrices = orderedBars.Select(p => p.ClosePrice).ToList();
 
-        var ema20Series = EmaCalculator.CalculateSeries(closePrices, ShortPeriod);
-        var ema50Series = EmaCalculator.CalculateSeries(closePrices, LongPeriod);
-        
-        // var offset = ema20Series.Count - ema50Series.Count;
-        
+        var ema20Series = EmaCalculator.CalculateSeries(closePrices, _shortPeriod);
+        var ema50Series = EmaCalculator.CalculateSeries(closePrices, _longPeriod);
+
         var currentEma20 = ema20Series[^1];
         var currentEma50 = ema50Series[^1];
         var currentPrice = closePrices[^1];

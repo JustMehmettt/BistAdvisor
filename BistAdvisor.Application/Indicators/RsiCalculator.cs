@@ -4,17 +4,22 @@ namespace BistAdvisor.Application.Indicators;
 
 public class RsiCalculator
 {
-    private const int Period = 14;
+    private readonly int _period;
+
+    public RsiCalculator(int period = 14)
+    {
+        _period = period;
+    }
 
     public decimal? Calculate(IReadOnlyList<PriceBar> priceBars)
     {
-        if (priceBars.Count < Period + 1)
+        if (priceBars.Count < _period + 1)
         {
             return null;
         }
 
         var orderedBars = priceBars.OrderBy(p => p.BarTime).ToList();
-        var recentBars = orderedBars.Skip(orderedBars.Count - (Period + 1)).ToList();
+        var recentBars = orderedBars.Skip(orderedBars.Count - (_period + 1)).ToList();
 
         decimal totalGain = 0;
         decimal totalLoss = 0;
@@ -33,8 +38,8 @@ public class RsiCalculator
             }
         }
 
-        var averageGain = totalGain / Period;
-        var averageLoss = totalLoss / Period;
+        var averageGain = totalGain / _period;
+        var averageLoss = totalLoss / _period;
 
         if (averageLoss == 0)
         {
@@ -46,7 +51,7 @@ public class RsiCalculator
 
         return Math.Round(rsi, 2);
     }
-    
+
     public List<decimal?> CalculateSeries(IReadOnlyList<PriceBar> priceBars)
     {
         var orderedBars = priceBars.OrderBy(p => p.BarTime).ToList();

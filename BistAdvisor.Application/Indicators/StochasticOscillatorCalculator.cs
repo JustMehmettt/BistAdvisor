@@ -10,23 +10,29 @@ public class StochasticResult
 
 public class StochasticOscillatorCalculator
 {
-    private const int KPeriod = 14;
-    private const int DPeriod = 3;
+    private readonly int _kPeriod;
+    private readonly int _dPeriod;
+
+    public StochasticOscillatorCalculator(int kPeriod = 14, int dPeriod = 3)
+    {
+        _kPeriod = kPeriod;
+        _dPeriod = dPeriod;
+    }
 
     public StochasticResult Calculate(IReadOnlyList<PriceBar> priceBars)
     {
         var orderedBars = priceBars.OrderBy(p => p.BarTime).ToList();
 
-        if (orderedBars.Count < KPeriod + DPeriod)
+        if (orderedBars.Count < _kPeriod + _dPeriod)
         {
             return new StochasticResult();
         }
 
         var kValues = new List<decimal>();
 
-        for (var i = KPeriod - 1; i < orderedBars.Count; i++)
+        for (var i = _kPeriod - 1; i < orderedBars.Count; i++)
         {
-            var window = orderedBars.Skip(i - (KPeriod - 1)).Take(KPeriod).ToList();
+            var window = orderedBars.Skip(i - (_kPeriod - 1)).Take(_kPeriod).ToList();
 
             var highestHigh = window.Max(p => p.HighPrice);
             var lowestLow = window.Min(p => p.LowPrice);
@@ -41,7 +47,7 @@ public class StochasticOscillatorCalculator
             kValues.Add(percentK);
         }
 
-        if (kValues.Count < DPeriod)
+        if (kValues.Count < _dPeriod)
         {
             return new StochasticResult
             {
@@ -49,15 +55,15 @@ public class StochasticOscillatorCalculator
             };
         }
 
-        var percentD = kValues.Skip(kValues.Count - DPeriod).Take(DPeriod).Average();
-        
+        var percentD = kValues.Skip(kValues.Count - _dPeriod).Take(_dPeriod).Average();
+
         return new StochasticResult
         {
             PercentK = Math.Round(kValues[^1], 4),
             PercentD = Math.Round(percentD, 4)
         };
     }
-    
+
     public List<StochasticResult> CalculateSeries(IReadOnlyList<PriceBar> priceBars)
     {
         var orderedBars = priceBars.OrderBy(p => p.BarTime).ToList();

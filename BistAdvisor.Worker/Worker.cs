@@ -22,14 +22,32 @@ public class Worker : BackgroundService
     {
         while (!stoppingToken.IsCancellationRequested)
         {
-            _logger.LogInformation("Data sync cycle started at: {time}", DateTimeOffset.UtcNow);
-            
+            _logger.LogInformation("Data sync cycle started at: {Time}", DateTimeOffset.UtcNow);
+
+            var intervalMinutes = await GetDataFetchIntervalAsync(stoppingToken);
+
             await RunCycleAsync(stoppingToken);
-            
-            _logger.LogInformation("Data sync cycle completed at: {time}", DateTimeOffset.UtcNow);
-        
-            await Task.Delay(TimeSpan.FromMinutes(15), stoppingToken);
+
+            _logger.LogInformation("Data sync cycle completed at: {Time}", DateTimeOffset.UtcNow);
+
+            await Task.Delay(TimeSpan.FromMinutes(intervalMinutes), stoppingToken);
         }
+    }
+    
+    private async Task<int> GetDataFetchIntervalAsync(CancellationToken stoppingToken)
+    {
+        using var scope = _scopeFactory.CreateScope();
+        var dbContext = scope.ServiceProvider.GetRequiredService<ApplicationDbContext>();
+
+        var setting = await dbContext.ApplicationSettings
+            .FirstOrDefaultAsync(s => s.Key == "Job.DataFetchIntervalMinutes", stoppingToken);
+
+        if (setting is not null && int.TryParse(setting.Value, out var minutes))
+        {
+            return minutes;
+        }
+
+        return 15;
     }
 
     private async Task RunCycleAsync(CancellationToken stoppingToken)

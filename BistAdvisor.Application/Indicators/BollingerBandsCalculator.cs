@@ -13,30 +13,36 @@ public class BollingerBandsResult
 
 public class BollingerBandsCalculator
 {
-    private const int Period = 20;
-    private const decimal StandardDeviationMultiplier = 2m;
+    private readonly int _period;
+    private readonly decimal _standardDeviationMultiplier;
+
+    public BollingerBandsCalculator(int period = 20, decimal standardDeviationMultiplier = 2m)
+    {
+        _period = period;
+        _standardDeviationMultiplier = standardDeviationMultiplier;
+    }
 
     public BollingerBandsResult Calculate(IReadOnlyList<PriceBar> priceBars)
     {
         var orderedBars = priceBars.OrderBy(p => p.BarTime).ToList();
 
-        if (orderedBars.Count < Period)
+        if (orderedBars.Count < _period)
         {
             return new BollingerBandsResult();
         }
 
-        var recentBars = orderedBars.Skip(orderedBars.Count - Period).ToList();
+        var recentBars = orderedBars.Skip(orderedBars.Count - _period).ToList();
         var closePrices = recentBars.Select(p => p.ClosePrice).ToList();
 
         var middleBand = closePrices.Average();
 
-        var sumOfSquareDifferences = closePrices.Sum(price => (price - middleBand) * (price - middleBand));
-        var variance = sumOfSquareDifferences / Period;
+        var sumOfSquaredDifferences = closePrices.Sum(price => (price - middleBand) * (price - middleBand));
+        var variance = sumOfSquaredDifferences / _period;
         var standardDeviation = (decimal)Math.Sqrt((double)variance);
 
-        var upperBand = middleBand + StandardDeviationMultiplier * standardDeviation;
-        var lowerBand = middleBand - StandardDeviationMultiplier * standardDeviation;
-        
+        var upperBand = middleBand + _standardDeviationMultiplier * standardDeviation;
+        var lowerBand = middleBand - _standardDeviationMultiplier * standardDeviation;
+
         return new BollingerBandsResult
         {
             UpperBand = Math.Round(upperBand, 4),
@@ -45,7 +51,7 @@ public class BollingerBandsCalculator
             CurrentPrice = orderedBars[^1].ClosePrice
         };
     }
-    
+
     public List<BollingerBandsResult> CalculateSeries(IReadOnlyList<PriceBar> priceBars)
     {
         var orderedBars = priceBars.OrderBy(p => p.BarTime).ToList();

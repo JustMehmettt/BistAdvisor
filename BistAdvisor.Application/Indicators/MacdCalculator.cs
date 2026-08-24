@@ -14,83 +14,90 @@ public class MacdResult
 
 public class MacdCalculator
 {
-     private const int FastPeriod = 12;
-     private const int SlowPeriod = 26;
-     private const int SignalPeriod = 9;
+    private readonly int _fastPeriod;
+    private readonly int _slowPeriod;
+    private readonly int _signalPeriod;
 
-     public MacdResult Calculate(IReadOnlyList<PriceBar> priceBars)
-     {
-         var orderedBars = priceBars.OrderBy(p => p.BarTime).ToList();
+    public MacdCalculator(int fastPeriod = 12, int slowPeriod = 26, int signalPeriod = 9)
+    {
+        _fastPeriod = fastPeriod;
+        _slowPeriod = slowPeriod;
+        _signalPeriod = signalPeriod;
+    }
 
-         if (orderedBars.Count < SlowPeriod + SignalPeriod)
-         {
-             return new MacdResult();
-         }
+    public MacdResult Calculate(IReadOnlyList<PriceBar> priceBars)
+    {
+        var orderedBars = priceBars.OrderBy(p => p.BarTime).ToList();
 
-         var closePrices = orderedBars.Select(p => p.ClosePrice).ToList();
-         
-         var fastEma = EmaCalculator.CalculateSeries(closePrices, FastPeriod);
-         var slowEma = EmaCalculator.CalculateSeries(closePrices, SlowPeriod);
-         
-         var offset = fastEma.Count - slowEma.Count;
+        if (orderedBars.Count < _slowPeriod + _signalPeriod)
+        {
+            return new MacdResult();
+        }
 
-         var macdLineSeries = new List<decimal>();
-         for (var i = 0; i < slowEma.Count; i++)
-         {
-             macdLineSeries.Add(fastEma[i + offset] - slowEma[i]);
-         }
+        var closePrices = orderedBars.Select(p => p.ClosePrice).ToList();
 
-         var signalSeries = EmaCalculator.CalculateSeries(macdLineSeries, SignalPeriod);
+        var fastEma = EmaCalculator.CalculateSeries(closePrices, _fastPeriod);
+        var slowEma = EmaCalculator.CalculateSeries(closePrices, _slowPeriod);
 
-         if (signalSeries.Count == 0)
-         {
-             return new MacdResult
-             {
-                 MacdLine = Math.Round(macdLineSeries[^1], 4),
-             };
-         }
+        var offset = fastEma.Count - slowEma.Count;
 
-         var macdLine = macdLineSeries[^1];
-         var signalLine = signalSeries[^1];
-         var histogram = macdLine - signalLine;
+        var macdLineSeries = new List<decimal>();
+        for (var i = 0; i < slowEma.Count; i++)
+        {
+            macdLineSeries.Add(fastEma[i + offset] - slowEma[i]);
+        }
 
-         var bullishCrossover = false;
-         var bearishCrossover = false;
-         var histogramStrengthening = false;
+        var signalSeries = EmaCalculator.CalculateSeries(macdLineSeries, _signalPeriod);
 
-         if (signalSeries.Count >= 2 && macdLineSeries.Count >= 2)
-         {
-             var previousMacd = macdLineSeries[^2];
-             var previousSignal = signalSeries[^2];
-             var previousHistogram = previousMacd - previousSignal;
-             
-             bullishCrossover = previousMacd <= previousSignal && macdLine > signalLine;
-             bearishCrossover = previousMacd >= previousSignal && macdLine < signalLine;
-             histogramStrengthening = Math.Abs(histogram) > Math.Abs(previousHistogram);
-         }
-         
-         return new MacdResult
-         {
-             MacdLine = Math.Round(macdLine, 4),
-             SignalLine = Math.Round(signalLine, 4),
-             Histogram = Math.Round(histogram, 4),
-             BullishCrossover = bullishCrossover,
-             BearishCrossover = bearishCrossover,
-             HistogramStrengthening = histogramStrengthening
-         };
-     }
-     
-     public List<MacdResult> CalculateSeries(IReadOnlyList<PriceBar> priceBars)
-     {
-         var orderedBars = priceBars.OrderBy(p => p.BarTime).ToList();
-         var result = new List<MacdResult>();
+        if (signalSeries.Count == 0)
+        {
+            return new MacdResult
+            {
+                MacdLine = Math.Round(macdLineSeries[^1], 4)
+            };
+        }
 
-         for (var i = 0; i < orderedBars.Count; i++)
-         {
-             var window = orderedBars.Take(i + 1).ToList();
-             result.Add(Calculate(window));
-         }
+        var macdLine = macdLineSeries[^1];
+        var signalLine = signalSeries[^1];
+        var histogram = macdLine - signalLine;
 
-         return result;
-     }
+        var bullishCrossover = false;
+        var bearishCrossover = false;
+        var histogramStrengthening = false;
+
+        if (signalSeries.Count >= 2 && macdLineSeries.Count >= 2)
+        {
+            var previousMacd = macdLineSeries[^2];
+            var previousSignal = signalSeries[^2];
+            var previousHistogram = previousMacd - previousSignal;
+
+            bullishCrossover = previousMacd <= previousSignal && macdLine > signalLine;
+            bearishCrossover = previousMacd >= previousSignal && macdLine < signalLine;
+            histogramStrengthening = Math.Abs(histogram) > Math.Abs(previousHistogram);
+        }
+
+        return new MacdResult
+        {
+            MacdLine = Math.Round(macdLine, 4),
+            SignalLine = Math.Round(signalLine, 4),
+            Histogram = Math.Round(histogram, 4),
+            BullishCrossover = bullishCrossover,
+            BearishCrossover = bearishCrossover,
+            HistogramStrengthening = histogramStrengthening
+        };
+    }
+
+    public List<MacdResult> CalculateSeries(IReadOnlyList<PriceBar> priceBars)
+    {
+        var orderedBars = priceBars.OrderBy(p => p.BarTime).ToList();
+        var result = new List<MacdResult>();
+
+        for (var i = 0; i < orderedBars.Count; i++)
+        {
+            var window = orderedBars.Take(i + 1).ToList();
+            result.Add(Calculate(window));
+        }
+
+        return result;
+    }
 }

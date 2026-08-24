@@ -127,15 +127,16 @@ public static class DataSeeder
 
             var settings = new List<ApplicationSetting>
             {
-                new() { Key = "Weight.Rsi", Value = "0.20", Description = "RSI indicator weight", UpdatedAt = settingsNow },
-                new() { Key = "Weight.Macd", Value = "0.25", Description = "MACD indicator weight", UpdatedAt = settingsNow },
-                new() { Key = "Weight.Ema", Value = "0.25", Description = "EMA20/EMA50 indicator weight", UpdatedAt = settingsNow },
-                new() { Key = "Weight.Bollinger", Value = "0.15", Description = "Bollinger Bands indicator weight", UpdatedAt = settingsNow },
-                new() { Key = "Weight.Stochastic", Value = "0.15", Description = "Stochastic Oscillator indicator weight", UpdatedAt = settingsNow },
-                new() { Key = "Threshold.StrongBuy", Value = "60", Description = "Minimum score for Strong Buy signal", UpdatedAt = settingsNow },
-                new() { Key = "Threshold.Buy", Value = "20", Description = "Minimum score for Buy signal", UpdatedAt = settingsNow },
-                new() { Key = "Threshold.Neutral", Value = "-19", Description = "Minimum score for Neutral signal", UpdatedAt = settingsNow },
-                new() { Key = "Threshold.Sell", Value = "-59", Description = "Minimum score for Sell signal", UpdatedAt = settingsNow }
+                new() { Key = "Period.Rsi", Value = "14", Description = "RSI calculation period", UpdatedAt = settingsNow },
+                new() { Key = "Period.MacdFast", Value = "12", Description = "MACD fast EMA period", UpdatedAt = settingsNow },
+                new() { Key = "Period.MacdSlow", Value = "26", Description = "MACD slow EMA period", UpdatedAt = settingsNow },
+                new() { Key = "Period.MacdSignal", Value = "9", Description = "MACD signal line period", UpdatedAt = settingsNow },
+                new() { Key = "Period.EmaShort", Value = "20", Description = "Short-term EMA period", UpdatedAt = settingsNow },
+                new() { Key = "Period.EmaLong", Value = "50", Description = "Long-term EMA period", UpdatedAt = settingsNow },
+                new() { Key = "Period.Bollinger", Value = "20", Description = "Bollinger Bands period", UpdatedAt = settingsNow },
+                new() { Key = "Period.StochasticK", Value = "14", Description = "Stochastic %K period", UpdatedAt = settingsNow },
+                new() { Key = "Period.StochasticD", Value = "3", Description = "Stochastic %D period", UpdatedAt = settingsNow },
+                new() { Key = "Job.DataFetchIntervalMinutes", Value = "15", Description = "Worker data sync interval in minutes", UpdatedAt = settingsNow }
             };
 
             await context.ApplicationSettings.AddRangeAsync(settings);
