@@ -10,8 +10,11 @@
 
 <form method="get" class="row g-2 mb-4" id="filter-form">
     <div class="col-md-2">
-        <input type="text" name="search" class="form-control" placeholder="Hisse/şirket ara..."
-               value="@ViewData["CurrentSearch"]" />
+        <div class="sc-float-field">
+            <input type="text" name="search" id="search-input" placeholder=" "
+                   value="@ViewData["CurrentSearch"]"/>
+            <label for="search-input">Hisse/Şirket</label>
+        </div>
     </div>
     <div class="col-md-2">
         <div class="sc-combobox">
@@ -57,12 +60,18 @@
         </div>
     </div>
     <div class="col-md-2">
-        <input type="number" name="minScore" class="form-control" placeholder="Min. Skor"
-               value="@ViewData["CurrentMinScore"]" />
+        <div class="sc-float-field">
+            <input type="number" name="minScore" id="minscore-input" placeholder=" "
+                   value="@ViewData["CurrentMinScore"]" />
+            <label for="minscore-input">Min. Skor</label>
+        </div>
     </div>
     <div class="col-md-2">
-        <input type="number" name="minConfidence" class="form-control" placeholder="Min. Güven %"
-               value="@ViewData["CurrentMinConfidence"]" />
+        <div class="sc-float-field">
+            <input type="number" name="minConfidence" id="minconfidence-input" placeholder=" "
+                   value="@ViewData["CurrentMinConfidence"]" />
+            <label for="minconfidence-input">Min. Güven %</label>
+        </div>
     </div>
     <div class="col-md-1 d-flex align-items-center">
         <div class="form-check">

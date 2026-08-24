@@ -158,3 +158,97 @@
 .sc-combobox-option.hidden {
     display: none;
 }
+
+.sc-textbox {
+    border: 2px solid #4656FF;
+    border-radius: 7px;
+    padding: 0 10px 8px;
+    margin: 0;
+    min-width: 0;
+}
+
+.sc-textbox legend {
+    padding: 0 6px;
+    font-family: 'Inter', system-ui, sans-serif;
+    font-weight: 600;
+    font-size: 13px;
+    color: #4656FF;
+    width: auto;
+}
+
+.sc-textbox input {
+    border: none;
+    outline: none;
+    width: 100%;
+    font-size: 14px;
+    color: #000;
+    background: transparent;
+    padding: 2px 0;
+}
+
+.sc-textbox input::placeholder {
+    color: #94a3b8;
+}
+
+.sc-float-field {
+    position: relative;
+    width: 100%;
+}
+
+.sc-float-field input {
+    width: 100%;
+    box-sizing: border-box;
+    border: 2px solid #cbd5e1;
+    border-radius: 7px;
+    padding: 14px 12px 6px;
+    font-size: 14px;
+    color: #000;
+    background: #fff;
+    outline: none;
+    transition: border-color 0.15s ease;
+}
+
+.sc-float-field input:focus {
+    border-color: #4656FF;
+}
+
+.sc-float-field label {
+    position: absolute;
+    left: 12px;
+    top: 50%;
+    transform: translateY(-50%);
+    font-family: 'Inter', system-ui, sans-serif;
+    font-size: 14px;
+    color: #64748B;
+    pointer-events: none;
+    background: transparent;
+    padding: 0 4px;
+    transition: all 0.15s ease;
+}
+
+.sc-float-field input:focus ~ label,
+.sc-float-field input:not(:placeholder-shown) ~ label {
+    top: 0;
+    transform: translateY(-50%) scale(0.85);
+    color: #4656FF;
+    background: #fff;
+    font-weight: 600;
+}
+
+.sc-float-field label {
+    position: absolute;
+    left: 12px;
+    top: 50%;
+    transform: translateY(-50%);
+    font-family: 'Inter', system-ui, sans-serif;
+    font-size: 14px;
+    color: #64748B;
+    pointer-events: none;
+    background: transparent;
+    padding: 0 4px;
+    transition: all 0.15s ease;
+    white-space: nowrap;
+    max-width: calc(100% - 24px);
+    overflow: hidden;
+    text-overflow: ellipsis;
+}
