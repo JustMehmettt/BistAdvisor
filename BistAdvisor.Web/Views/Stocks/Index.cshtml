@@ -14,23 +14,47 @@
                value="@ViewData["CurrentSearch"]" />
     </div>
     <div class="col-md-2">
-        <select name="sector" class="form-select">
-            <option value="">Tüm Sektörler</option>
-            @foreach (var sector in sectors)
-            {
-                <option value="@sector" selected="@(sector == ViewData["CurrentSector"]?.ToString())">@sector</option>
-            }
-        </select>
+        <div class="sc-combobox">
+            <button type="button" class="sc-combobox-trigger" data-role="trigger">
+                <span data-role="label">Tüm Sektörler</span>
+                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+                    <path d="M7 9l5-5 5 5M7 15l5 5 5-5" stroke="#64748B" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/>
+                </svg>
+            </button>
+            <div class="sc-combobox-panel" data-role="panel">
+                <input type="text" class="sc-combobox-search" data-role="search" placeholder="Sektör ara..." autocomplete="off" />
+                <ul class="sc-combobox-list" data-role="list">
+                    <li class="sc-combobox-option" data-value="">Tüm Sektörler</li>
+                    @foreach (var sector in sectors)
+                    {
+                        <li class="sc-combobox-option" data-value="@sector">@sector</li>
+                    }
+                </ul>
+            </div>
+            <input type="hidden" name="sector" data-role="hidden" value="@ViewData["CurrentSector"]" />
+        </div>
     </div>
     <div class="col-md-2">
-        <select name="signalType" class="form-select">
-            <option value="">Tüm Sinyaller</option>
-            <option value="StrongBuy" selected="@("StrongBuy" == ViewData["CurrentSignalType"]?.ToString())">Güçlü Al</option>
-            <option value="Buy" selected="@("Buy" == ViewData["CurrentSignalType"]?.ToString())">Al</option>
-            <option value="Neutral" selected="@("Neutral" == ViewData["CurrentSignalType"]?.ToString())">Nötr</option>
-            <option value="Sell" selected="@("Sell" == ViewData["CurrentSignalType"]?.ToString())">Sat</option>
-            <option value="StrongSell" selected="@("StrongSell" == ViewData["CurrentSignalType"]?.ToString())">Güçlü Sat</option>
-        </select>
+        <div class="sc-combobox">
+            <button type="button" class="sc-combobox-trigger" data-role="trigger">
+                <span data-role="label">Tüm Sinyaller</span>
+                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+                    <path d="M7 9l5-5 5 5M7 15l5 5 5-5" stroke="#64748B" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/>
+                </svg>
+            </button>
+            <div class="sc-combobox-panel" data-role="panel">
+                <input type="text" class="sc-combobox-search" data-role="search" placeholder="Sinyal ara..." autocomplete="off" />
+                <ul class="sc-combobox-list" data-role="list">
+                    <li class="sc-combobox-option" data-value="">Tüm Sinyaller</li>
+                    <li class="sc-combobox-option" data-value="StrongBuy">Güçlü Al</li>
+                    <li class="sc-combobox-option" data-value="Buy">Al</li>
+                    <li class="sc-combobox-option" data-value="Neutral">Nötr</li>
+                    <li class="sc-combobox-option" data-value="Sell">Sat</li>
+                    <li class="sc-combobox-option" data-value="StrongSell">Güçlü Sat</li>
+                </ul>
+            </div>
+            <input type="hidden" name="signalType" data-role="hidden" value="@ViewData["CurrentSignalType"]" />
+        </div>
     </div>
     <div class="col-md-2">
         <input type="number" name="minScore" class="form-control" placeholder="Min. Skor"
@@ -44,7 +68,7 @@
         <div class="form-check">
             <input type="checkbox" name="hideStale" value="true" class="form-check-input" id="hideStaleCheck"
                    checked="@((bool)(ViewData["CurrentHideStale"] ?? false))" />
-            <label class="form-check-label small" for="hideStaleCheck">Güncel Olmayanları Gizle</label>
+            <label class="form-check-label small" for="hideStaleCheck">Güncel Olmayan Gizle</label>
         </div>
     </div>
     <div class="col-md-1">

@@ -34,14 +34,26 @@
 
 <form method="get" class="row g-2 mb-4">
     <div class="col-md-3">
-        <select name="signalType" class="form-select" onchange="this.form.submit()">
-            <option value="">Tüm Sinyaller</option>
-            <option value="StrongBuy" selected="@("StrongBuy" == ViewData["CurrentSignalType"]?.ToString())">Güçlü Al</option>
-            <option value="Buy" selected="@("Buy" == ViewData["CurrentSignalType"]?.ToString())">Al</option>
-            <option value="Neutral" selected="@("Neutral" == ViewData["CurrentSignalType"]?.ToString())">Nötr</option>
-            <option value="Sell" selected="@("Sell" == ViewData["CurrentSignalType"]?.ToString())">Sat</option>
-            <option value="StrongSell" selected="@("StrongSell" == ViewData["CurrentSignalType"]?.ToString())">Güçlü Sat</option>
-        </select>
+        <div class="sc-combobox" data-auto-submit>
+            <button type="button" class="sc-combobox-trigger" data-role="trigger">
+                <span data-role="label">Tüm Sinyaller</span>
+                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+                    <path d="M7 9l5-5 5 5M7 15l5 5 5-5" stroke="#64748B" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/>
+                </svg>
+            </button>
+            <div class="sc-combobox-panel" data-role="panel">
+                <input type="text" class="sc-combobox-search" data-role="search" placeholder="Sinyal ara..." autocomplete="off" />
+                <ul class="sc-combobox-list" data-role="list">
+                    <li class="sc-combobox-option" data-value="">Tüm Sinyaller</li>
+                    <li class="sc-combobox-option" data-value="StrongBuy">Güçlü Al</li>
+                    <li class="sc-combobox-option" data-value="Buy">Al</li>
+                    <li class="sc-combobox-option" data-value="Neutral">Nötr</li>
+                    <li class="sc-combobox-option" data-value="Sell">Sat</li>
+                    <li class="sc-combobox-option" data-value="StrongSell">Güçlü Sat</li>
+                </ul>
+            </div>
+            <input type="hidden" name="signalType" data-role="hidden" value="@ViewData["CurrentSignalType"]" />
+        </div>
     </div>
 </form>
 
