@@ -18,54 +18,84 @@
 
 <table class="table-dynamic">
     <thead>
-        <tr>
-            <th>
-                <a href="#" class="sort-link text-decoration-none" style="color:#222;" data-column="symbol">Hisse</a>
-                @if (currentSortBy == "symbol") { @(currentSortDir == "asc" ? "▲" : "▼") }
-            </th>
-            <th>
-                <a href="#" class="sort-link text-decoration-none" style="color:#222;" data-column="companyname">Şirket</a>
-                @if (currentSortBy == "companyname") { @(currentSortDir == "asc" ? "▲" : "▼") }
-            </th>
-            <th>
-                <a href="#" class="sort-link text-decoration-none" style="color:#222;" data-column="sector">Sektör</a>
-                @if (currentSortBy == "sector") { @(currentSortDir == "asc" ? "▲" : "▼") }
-            </th>
-            <th>
-                <a href="#" class="sort-link text-decoration-none" style="color:#222;" data-column="lastprice">Son Fiyat</a>
-                @if (currentSortBy == "lastprice") { @(currentSortDir == "asc" ? "▲" : "▼") }
-            </th>
-            <th>
-                <a href="#" class="sort-link text-decoration-none" style="color:#222;" data-column="totalscore">Skor</a>
-                @if (currentSortBy == "totalscore") { @(currentSortDir == "asc" ? "▲" : "▼") }
-            </th>
-            <th>
-                <a href="#" class="sort-link text-decoration-none" style="color:#222;" data-column="confidencerate">Güven Oranı</a>
-                @if (currentSortBy == "confidencerate") { @(currentSortDir == "asc" ? "▲" : "▼") }
-            </th>
-            <th>
-                <a href="#" class="sort-link text-decoration-none" style="color:#222;" data-column="signaltype">Sinyal</a>
-                @if (currentSortBy == "signaltype") { @(currentSortDir == "asc" ? "▲" : "▼") }
-            </th>
-            <th>
-                <a href="#" class="sort-link text-decoration-none" style="color:#222;" data-column="lastupdate">Son Güncelleme</a>
-                @if (currentSortBy == "lastupdate") { @(currentSortDir == "asc" ? "▲" : "▼") }
-            </th>
-        </tr>
-    </thead>
+    <tr>
+        <th>
+            <a href="#" class="sort-link text-decoration-none" style="color:#222;" data-column="symbol">Hisse</a>
+            @if (currentSortBy == "symbol") { @(currentSortDir == "asc" ? "▲" : "▼") }
+        </th>
+        <th>
+            <a href="#" class="sort-link text-decoration-none" style="color:#222;" data-column="companyname">Şirket</a>
+            @if (currentSortBy == "companyname") { @(currentSortDir == "asc" ? "▲" : "▼") }
+        </th>
+        <th>
+            <a href="#" class="sort-link text-decoration-none" style="color:#222;" data-column="sector">Sektör</a>
+            @if (currentSortBy == "sector") { @(currentSortDir == "asc" ? "▲" : "▼") }
+        </th>
+        <th>
+            <a href="#" class="sort-link text-decoration-none" style="color:#222;" data-column="lastprice">Son Fiyat</a>
+            @if (currentSortBy == "lastprice") { @(currentSortDir == "asc" ? "▲" : "▼") }
+        </th>
+        <th>
+            <a href="#" class="sort-link text-decoration-none" style="color:#222;" data-column="dailychangerate">Günlük Değişim</a>
+            @if (currentSortBy == "dailychangerate") { @(currentSortDir == "asc" ? "▲" : "▼") }
+        </th>
+        <th>
+            <a href="#" class="sort-link text-decoration-none" style="color:#222;" data-column="rsivalue">RSI</a>
+            @if (currentSortBy == "rsivalue") { @(currentSortDir == "asc" ? "▲" : "▼") }
+        </th>
+        <th>MACD</th>
+        <th>EMA Trendi</th>
+        <th>
+            <a href="#" class="sort-link text-decoration-none" style="color:#222;" data-column="totalscore">Skor</a>
+            @if (currentSortBy == "totalscore") { @(currentSortDir == "asc" ? "▲" : "▼") }
+        </th>
+        <th>
+            <a href="#" class="sort-link text-decoration-none" style="color:#222;" data-column="confidencerate">Güven Oranı</a>
+            @if (currentSortBy == "confidencerate") { @(currentSortDir == "asc" ? "▲" : "▼") }
+        </th>
+        <th>
+            <a href="#" class="sort-link text-decoration-none" style="color:#222;" data-column="signaltype">Sinyal</a>
+            @if (currentSortBy == "signaltype") { @(currentSortDir == "asc" ? "▲" : "▼") }
+        </th>
+        <th>
+            <a href="#" class="sort-link text-decoration-none" style="color:#222;" data-column="lastupdate">Son Güncelleme</a>
+            @if (currentSortBy == "lastupdate") { @(currentSortDir == "asc" ? "▲" : "▼") }
+        </th>
+    </tr>
+</thead>
     <tbody>
-        @foreach (var stock in Model)
+    @foreach (var stock in Model)
+    {
+        var badgeClass = stock.SignalType switch
         {
-            <tr>
-                <td><a href="/Stocks/Detail/@stock.Symbol" class="text-decoration-none" style="color:#0A8DD0; font-weight:600;">@stock.Symbol</a></td>
-                <td>@stock.CompanyName</td>
-                <td>@stock.Sector</td>
-                <td>@(stock.LastPrice?.ToString("F2") ?? "-")</td>
-                <td>@(stock.TotalScore?.ToString("F2") ?? "-")</td>
-                <td>@(stock.ConfidenceRate?.ToString("F1") + "%")</td>
-                <td><span class="pill @PillClass(stock.SignalType)">@stock.SignalType</span></td>
-                <td>@(stock.LastUpdate?.ToLocalTime().ToString("dd.MM.yyyy HH:mm") ?? "-")</td>
-            </tr>
-        }
+            "StrongBuy" => "pill-green",
+            "Buy" => "pill-green",
+            "Sell" => "pill-red",
+            "StrongSell" => "pill-red",
+            _ => "pill-gray"
+        };
+
+        var changeColor = stock.DailyChangeRate switch
+        {
+            > 0 => "#1E9E4A",
+            < 0 => "#D6373E",
+            _ => "#222"
+        };
+
+        <tr>
+            <td><a href="/Stocks/Detail/@stock.Symbol" class="text-decoration-none" style="color:#0A8DD0; font-weight:600;">@stock.Symbol</a></td>
+            <td>@stock.CompanyName</td>
+            <td>@stock.Sector</td>
+            <td>@(stock.LastPrice?.ToString("F2") ?? "-")</td>
+            <td style="color:@changeColor;">@(stock.DailyChangeRate.HasValue ? $"{stock.DailyChangeRate:F2}%" : "-")</td>
+            <td>@(stock.RsiValue?.ToString("F1") ?? "-")</td>
+            <td>@(stock.MacdStatus ?? "-")</td>
+            <td>@(stock.EmaTrend ?? "-")</td>
+            <td>@(stock.TotalScore?.ToString("F2") ?? "-")</td>
+            <td>@(stock.ConfidenceRate?.ToString("F1") + "%")</td>
+            <td><span class="pill @badgeClass">@stock.SignalType</span></td>
+            <td>@(stock.LastUpdate?.ToLocalTime().ToString("dd.MM.yyyy HH:mm") ?? "-")</td>
+        </tr>
+    }
     </tbody>
 </table>
