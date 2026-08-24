@@ -1,8 +1,10 @@
+using System.Runtime.InteropServices.JavaScript;
 using BistAdvisor.Application.Bulletins;
 using BistAdvisor.Application.Dtos;
 using BistAdvisor.Application.Indicators;
 using BistAdvisor.Application.Jobs;
 using BistAdvisor.Application.MarketData;
+using BistAdvisor.Domain.Entities;
 using BistAdvisor.Infrastructure.Bulletins;
 using BistAdvisor.Infrastructure.Data;
 using BistAdvisor.Infrastructure.MarketData;
@@ -200,5 +202,306 @@ app.MapGet("/api/signals/latest",
             TotalCount = totalCount
         });
     });
+
+app.MapGet("/api/stocks/{symbol}/prices", async (string symbol, ApplicationDbContext db, int page = 1, int pageSize = 30) =>
+{
+    var stock = await db.Stocks.FirstOrDefaultAsync(s => s.Symbol == symbol);
+    if (stock is null)
+    {
+        return Results.NotFound(new { Message = $"Stock '{symbol}' not found." });
+    }
+
+    var query = db.PriceBars
+        .Where(p => p.StockId == stock.Id && p.Interval == PriceInterval.Daily)
+        .OrderByDescending(p => p.BarTime);
+    
+    var totalCount = await query.CountAsync();
+    
+    var prices = await query
+        .Skip((page - 1) * pageSize)
+        .Take(pageSize)
+        .Select(p => new PriceDto
+        {
+            BarTime = p.BarTime,
+            Open = p.OpenPrice,
+            High = p.HighPrice,
+            Low = p.LowPrice,
+            Close = p.ClosePrice,
+            Volume = p.Volume
+        })
+        .ToListAsync();
+    
+    return Results.Ok(new PagedResult<PriceDto>
+    {
+        Items = prices,
+        Page = page,
+        PageSize = pageSize,
+        TotalCount = totalCount
+    });   
+});
+
+app.MapGet("/api/stocks/{symbol}/indicators", async (string symbol, ApplicationDbContext db, int page = 1, int pageSize = 30) => 
+{
+    var stock = await db.Stocks.FirstOrDefaultAsync(s => s.Symbol == symbol);
+    if (stock is null)
+    {
+        return Results.NotFound(new { Message = $"Stock '{symbol}' not found." });
+    }
+
+    var query = db.IndicatorResults
+        .Where(r => r.StockId == stock.Id && r.Interval == PriceInterval.Daily)
+        .OrderByDescending(r => r.BarTime);
+    
+    var totalCount = await query.CountAsync();
+        
+    var indicators = await query
+        .Skip((page - 1) * pageSize)
+        .Take(pageSize)
+        .Select(r => new IndicatorDto
+        {
+            BarTime = r.BarTime,
+            RsiValue = r.RsiValue,
+            MacdValue = r.MacdValue,
+            MacdSignalValue = r.MacdSignalValue,
+            MacdHistogramValue = r.MacdHistogramValue,
+            Ema20 = r.Ema20,
+            Ema50 = r.Ema50,
+            BollingerUpper = r.BollingerUpper,
+            BollingerMiddle = r.BollingerMiddle,
+            BollingerLower = r.BollingerLower,
+            StochasticK = r.StochasticK,
+            StochasticD = r.StochasticD
+        })
+        .ToListAsync();
+    
+    return Results.Ok(new PagedResult<IndicatorDto>
+        {
+            Items = indicators,
+            Page = page,
+            PageSize = pageSize,
+            TotalCount = totalCount
+        });
+});
+
+app.MapGet("api/signals/changes", async (ApplicationDbContext db, string? symbol = null, int page = 1, int pageSize = 30) =>
+{
+    var query = db.SignalChanges.Include(c => c.Stock).AsQueryable();
+
+    if (!string.IsNullOrWhiteSpace(symbol))
+    {
+        query = query.Where(c => c.Stock.Symbol == symbol);
+    }
+    
+    var totalCount = await query.CountAsync();
+    
+    var changes = await query
+        .OrderByDescending(c => c.ChangeTime)
+        .Skip((page - 1) * pageSize)
+        .Take(pageSize)
+        .Select(c => new SignalChangeDto
+        {
+            Symbol = c.Stock.Symbol,
+            CompanyName = c.Stock.CompanyName,
+            PreviousSignalType = c.PreviousSignalType.ToString(),
+            NewSignalType = c.NewSignalType.ToString(),
+            PreviousScore = c.PreviousScore,
+            NewScore = c.NewScore,
+            ChangeTime = c.ChangeTime,
+            ChangeReason = c.ChangeReason
+        })
+        .ToListAsync();
+
+    return Results.Ok(new PagedResult<SignalChangeDto>
+    {
+        Items = changes,
+        Page = page,
+        PageSize = pageSize,
+        TotalCount = totalCount
+    });
+});
+
+app.MapGet("/api/bulletins/today", async (ApplicationDbContext db) =>
+{
+    var today = DateOnly.FromDateTime(DateTime.UtcNow);
+    
+    var bulletin = await db.DailyBulletins
+        .Include(b => b.Items)
+        .ThenInclude(i => i.Stock)
+        .Where(b => b.BulletinDate == today && b.Status == BulletinStatus.Active)
+        .OrderByDescending(b => b.GeneratedAt)
+        .FirstOrDefaultAsync();
+
+    if (bulletin is null)
+    {
+        return Results.NotFound(new { Message = "No active bulletin found for today." });
+    }
+
+    return Results.Ok(MapBulletin(bulletin));
+});
+
+app.MapGet("/api/bulletins/{date}", async (DateOnly date, ApplicationDbContext db) =>
+{
+    var bulletin = await db.DailyBulletins
+        .Include(b => b.Items)
+        .ThenInclude(i => i.Stock)
+        .Where(b => b.BulletinDate == date)
+        .OrderByDescending(b => b.GeneratedAt)
+        .FirstOrDefaultAsync();
+    
+    if (bulletin is null)
+    {
+        return Results.NotFound(new { Message = $"No bulletin found for {date:yyyy-MM-dd}."});
+    }
+    
+    return Results.Ok(MapBulletin(bulletin));
+});
+
+app.MapGet("/api/jobs", async (ApplicationDbContext db, int page = 1, int pageSize = 30) =>
+{
+    var query = db.DataFetchLogs.Include(l => l.Stock).OrderByDescending(l => l.StartedAt);
+
+    var totalCount = await query.CountAsync();
+
+    var jobs = await query
+        .Skip((page - 1) * pageSize)
+        .Take(pageSize)
+        .Select(l => new JobStatusDto
+        {
+            Id = l.Id,
+            JobName = l.JobName,
+            StockSymbol = l.Stock != null ? l.Stock.Symbol : null,
+            StartedAt = l.StartedAt,
+            CompletedAt = l.CompletedAt,
+            Status = l.Status.ToString(),
+            InsertedRowCount = l.InsertedRowCount,
+            ErrorMessage = l.ErrorMessage
+        })
+        .ToListAsync();
+    
+    return Results.Ok(new PagedResult<JobStatusDto>
+    {
+        Items = jobs,
+        Page = page,
+        PageSize = pageSize,
+        TotalCount = totalCount
+    });
+});
+
+app.MapPost("api/post/data-sync", async (
+    ApplicationDbContext db, IPriceDataService priceDataService, ISignalService SignalService,
+    IJobLockService jobLockService) =>
+{
+    const string jobName = "DataSyncAndSignalCalculation";
+    var lockAcquired = await jobLockService.TryAcquireLockAsync(jobName);
+
+    if (!lockAcquired)
+    {
+        return Results.Conflict(new { Message = "A data synchronization job is already running." });
+    }
+
+    try
+    {
+        var activeStocks = await db.Stocks.Where(s => s.IsActive).ToListAsync();
+        var processedCount = 0;
+        
+        foreach (var stock in activeStocks)
+        {
+            try
+            {
+                await priceDataService.SyncHistoricalDataAsync(
+                    stock.Symbol, DateTimeOffset.UtcNow.AddDays(-90), DateTimeOffset.UtcNow);
+                await SignalService.CalculateAndSaveSignalAsync(stock.Symbol);
+                processedCount++;
+            }
+            catch
+            {
+                
+            }
+        }
+
+        return Results.Ok(new
+        {
+            Message = "Data synchronization completed.", ProcessedCount = processedCount,
+            TotalCount = activeStocks.Count
+        });
+    }
+    finally
+    {
+        await jobLockService.ReleaseLockAsync(jobName);
+    }
+});
+
+app.MapPost("/api/jobs/generate-bulletin", async (IBulletinService BulletinService) =>
+{
+    var bulletin = await BulletinService.GenerateDailyBulletinAsync(DateOnly.FromDateTime(DateTime.UtcNow));
+
+    return Results.Ok(new { bulletin.Id, bulletin.Title, bulletin.Status, ItemCount = bulletin.Items.Count });
+});
+
+app.MapGet("/api/system/data-health", async (ApplicationDbContext db, IMarketDataProvider marketDataProvider) =>
+{
+    var isAvailable = await marketDataProvider.IsAvailableAsync();
+    
+    var activeStocks = await db.Stocks.Where(s => s.IsActive).ToListAsync();
+    var totalActiveStocks = activeStocks.Count;
+    
+    var allSignals = await db.SignalSnapshots.ToListAsync();
+    var latestSignals = allSignals
+        .GroupBy(s => s.StockId)
+        .Select(g => g.OrderByDescending(s => s.CreatedAt).First())
+        .ToList();
+    
+    var now = DateTimeOffset.UtcNow;
+    var stocksWithRecentData = latestSignals.Count(s => (now - s.CreatedAt) < TimeSpan.FromDays(1));
+    var stocksWithStaleData = latestSignals.Count(s => (now - s.CreatedAt) >= TimeSpan.FromDays(1));
+    
+    var lastSuccessfulSync = await db.DataFetchLogs
+        .Where(l => l.Status == JobStatus.Success)
+        .OrderByDescending(l => l.StartedAt)
+        .Select(l => l.CompletedAt)
+        .FirstOrDefaultAsync();
+
+    var failedJobsLast24Hours = await db.DataFetchLogs
+        .Where(l => l.Status == JobStatus.Failed && l.StartedAt >= now.AddHours(-24))
+        .CountAsync();
+
+    return Results.Ok(new DataHealthDto
+    {
+        IsDataSourceAvailable = isAvailable,
+        TotalActiveStocks = totalActiveStocks,
+        StocksWithRecentData = stocksWithRecentData,
+        StocksWithStaleData = stocksWithStaleData,
+        LastSuccessfulSync = lastSuccessfulSync,
+        FailedJobsLast24Hours = failedJobsLast24Hours
+    });
+});
+
+
+static BulletinDto MapBulletin(DailyBulletin bulletin)
+{
+    return new BulletinDto
+    {
+        Id = bulletin.Id,
+        BulletinDate = bulletin.BulletinDate,
+        Title = bulletin.Title,
+        Summary = bulletin.Summary,
+        Status = bulletin.Status.ToString(),
+        GeneratedAt = bulletin.GeneratedAt,
+        Items = bulletin.Items
+            .OrderBy(i => i.Rank)
+            .Select(i => new BulletinItemDto
+            {
+                Symbol = i.Stock.Symbol,
+                CompanyName = i.Stock.CompanyName,
+                SignalType = i.SignalType.ToString(),
+                TotalScore = i.TotalScore,
+                ConfidenceRate = i.ConfidenceRate,
+                LastPrice = i.LastPrice,
+                DailyChangeRate = i.DailyChangeRate,
+                ReasonText = i.ReasonText
+            })
+            .ToList()
+    };
+}
 
 app.Run();
