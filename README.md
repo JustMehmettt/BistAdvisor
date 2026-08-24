@@ -74,6 +74,189 @@ Veri kaynağı, `IMarketDataProvider` arayüzü üzerinden soyutlanmıştır —
 
 `Web` ve `Worker` projeleri, üretim ortamındaki dağıtımı yansıtacak şekilde birbirinden bağımsız iki ayrı süreç (process) olarak çalışır; ikisi de aynı veritabanına bağlanır.
 
+## Veritabanı Şeması (ER Diyagramı)
+
+```mermaid
+erDiagram
+    Stock ||--o{ PriceBar : "has"
+    Stock ||--o{ IndicatorResult : "has"
+    Stock ||--o{ SignalSnapshot : "has"
+    Stock ||--o{ SignalChange : "has"
+    Stock ||--o{ DataFetchLog : "has"
+    Stock ||--o{ MarketDataRawLog : "has"
+    Stock ||--o{ BulletinItem : "referenced in"
+    DailyBulletin ||--o{ BulletinItem : "contains"
+
+    Stock {
+        int Id PK
+        string Symbol
+        string ProviderSymbol
+        string CompanyName
+        string Sector
+        string Market
+        bool IsActive
+    }
+
+    PriceBar {
+        long Id PK
+        int StockId FK
+        string Interval
+        datetimeoffset BarTime
+        decimal OpenPrice
+        decimal HighPrice
+        decimal LowPrice
+        decimal ClosePrice
+        long Volume
+        string DataSource
+    }
+
+    IndicatorResult {
+        long Id PK
+        int StockId FK
+        datetimeoffset BarTime
+        decimal RsiValue
+        decimal MacdValue
+        decimal Ema20
+        decimal Ema50
+        decimal BollingerUpper
+        decimal BollingerLower
+        decimal StochasticK
+        decimal StochasticD
+    }
+
+    SignalSnapshot {
+        long Id PK
+        int StockId FK
+        datetimeoffset BarTime
+        int RsiScore
+        int MacdScore
+        int EmaScore
+        int BollingerScore
+        int StochasticScore
+        decimal TotalScore
+        decimal ConfidenceRate
+        string SignalType
+        string Explanation
+    }
+
+    SignalChange {
+        long Id PK
+        int StockId FK
+        string PreviousSignalType
+        string NewSignalType
+        decimal PreviousScore
+        decimal NewScore
+        datetimeoffset ChangeTime
+    }
+
+    DailyBulletin {
+        long Id PK
+        date BulletinDate
+        string Title
+        string Summary
+        string Status
+        datetimeoffset GeneratedAt
+    }
+
+    BulletinItem {
+        long Id PK
+        long BulletinId FK
+        int StockId FK
+        int Rank
+        string SignalType
+        decimal TotalScore
+        string ReasonText
+    }
+
+    DataFetchLog {
+        long Id PK
+        string JobName
+        int StockId FK
+        datetimeoffset StartedAt
+        string Status
+        int InsertedRowCount
+    }
+
+    MarketDataRawLog {
+        long Id PK
+        int StockId FK
+        string ProviderName
+        bool WasSuccessful
+        int RetryCount
+    }
+
+    ApplicationSetting {
+        int Id PK
+        string Key
+        string Value
+        string Description
+    }
+```
+
+## Mimari Diyagramı
+
+```mermaid
+graph TD
+    subgraph "BistAdvisor.Web"
+        WebAPI["Web API Uçları<br/>(/api/...)"]
+        MVC["MVC Web Arayüzü<br/>(Dashboard, Hisseler, Bülten, Yönetim)"]
+    end
+
+    subgraph "BistAdvisor.Worker"
+        Worker["Periyodik Arka Plan Servisi"]
+    end
+
+    subgraph "BistAdvisor.Infrastructure"
+        DbContext["ApplicationDbContext (EF Core)"]
+        YahooProvider["YahooMarketDataProvider"]
+        MockProvider["MockMarketDataProvider"]
+        PriceService["PriceDataService"]
+        SignalService["SignalService"]
+        BulletinService["BulletinService"]
+        JobLock["JobLockService"]
+    end
+
+    subgraph "BistAdvisor.Application"
+        IMarketDataProvider["IMarketDataProvider"]
+        Calculators["İndikatör Hesaplayıcılar<br/>(RSI, MACD, EMA, Bollinger, Stochastic)"]
+        SignalCalculator["SignalCalculator"]
+        Interfaces["Servis Arayüzleri<br/>(IPriceDataService, ISignalService, IBulletinService)"]
+    end
+
+    subgraph "BistAdvisor.Domain"
+        Entities["Entity'ler<br/>(Stock, PriceBar, SignalSnapshot, ...)"]
+    end
+
+    subgraph "Dış Kaynaklar"
+        YahooAPI["Yahoo Finance API"]
+        SqlServer["SQL Server"]
+    end
+
+    MVC --> DbContext
+    WebAPI --> DbContext
+    Worker --> PriceService
+    Worker --> SignalService
+    Worker --> JobLock
+
+    PriceService --> IMarketDataProvider
+    PriceService --> DbContext
+    SignalService --> Calculators
+    SignalService --> SignalCalculator
+    SignalService --> DbContext
+    BulletinService --> DbContext
+
+    YahooProvider -.implements.-> IMarketDataProvider
+    MockProvider -.implements.-> IMarketDataProvider
+    YahooProvider --> YahooAPI
+
+    Calculators --> Entities
+    DbContext --> Entities
+    DbContext --> SqlServer
+
+    style YahooAPI fill:#FBE38E
+    style SqlServer fill:#D4F8D3
+```
+
 ## Kurulum
 
 ### Gereksinimler
