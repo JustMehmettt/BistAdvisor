@@ -17,9 +17,10 @@ public class StocksController : Controller
         _context = context;
     }
 
-    public async Task<IActionResult> Index(string? sector, string? signalType, decimal? minScore, decimal? minConfidence, bool hideStale, string? search, string sortBy = "symbol", string sortDir = "asc")
+    public async Task<IActionResult> Index(string? sector, string? signalType, decimal? minScore, decimal? minConfidence, bool hideStale, string? search, string sortBy = "symbol", string sortDir = "asc", int page = 1)
     {
-        var results = await GetStockListAsync(sector, signalType, minScore, minConfidence, hideStale, search, sortBy, sortDir);
+        const int pageSize = 20;
+        var result = await GetStockListAsync(sector, signalType, minScore, minConfidence, hideStale, search, sortBy, sortDir, page, pageSize);
 
         ViewData["Sectors"] = await _context.Stocks
             .Where(s => s.IsActive && s.Sector != null)
@@ -36,14 +37,18 @@ public class StocksController : Controller
         ViewData["CurrentSearch"] = search;
         ViewData["CurrentSortBy"] = sortBy;
         ViewData["CurrentSortDir"] = sortDir;
+        ViewData["CurrentPage"] = page;
+        ViewData["TotalPages"] = result.TotalPages;
+        ViewData["TotalCount"] = result.TotalCount;
 
-        return View(results);
+        return View(result.Items);
     }
 
     [HttpGet]
-    public async Task<IActionResult> Table(string? sector, string? signalType, decimal? minScore, decimal? minConfidence, bool hideStale, string? search, string sortBy = "symbol", string sortDir = "asc")
+    public async Task<IActionResult> Table(string? sector, string? signalType, decimal? minScore, decimal? minConfidence, bool hideStale, string? search, string sortBy = "symbol", string sortDir = "asc", int page = 1)
     {
-        var results = await GetStockListAsync(sector, signalType, minScore, minConfidence, hideStale, search, sortBy, sortDir);
+        const int pageSize = 20;
+        var result = await GetStockListAsync(sector, signalType, minScore, minConfidence, hideStale, search, sortBy, sortDir, page, pageSize);
 
         ViewData["CurrentSortBy"] = sortBy;
         ViewData["CurrentSortDir"] = sortDir;
@@ -53,8 +58,11 @@ public class StocksController : Controller
         ViewData["CurrentMinConfidence"] = minConfidence;
         ViewData["CurrentHideStale"] = hideStale;
         ViewData["CurrentSearch"] = search;
+        ViewData["CurrentPage"] = page;
+        ViewData["TotalPages"] = result.TotalPages;
+        ViewData["TotalCount"] = result.TotalCount;
 
-        return PartialView("_StockTable", results);
+        return PartialView("_StockTable", result.Items);
     }
 
     [HttpGet]
@@ -160,9 +168,9 @@ public class StocksController : Controller
         return padded;
     }
 
-private async Task<List<StockListItemDto>> GetStockListAsync(
+private async Task<PagedResult<StockListItemDto>> GetStockListAsync(
     string? sector, string? signalType, decimal? minScore, decimal? minConfidence, bool hideStale,
-    string? search, string sortBy, string sortDir)
+    string? search, string sortBy, string sortDir, int page, int pageSize)
 {
     var stocks = await _context.Stocks.Where(s => s.IsActive).ToListAsync();
 
@@ -269,8 +277,8 @@ private async Task<List<StockListItemDto>> GetStockListAsync(
         combined = combined.Where(x => !x.IsStale);
     }
 
-    var results = combined
-        .Select(x => new StockListItemDto
+    var sortedResults = SortStocks(
+        combined.Select(x => new StockListItemDto
         {
             Symbol = x.Stock.Symbol,
             CompanyName = x.Stock.CompanyName,
@@ -284,10 +292,23 @@ private async Task<List<StockListItemDto>> GetStockListAsync(
             TotalScore = x.Signal?.TotalScore,
             ConfidenceRate = x.Signal?.ConfidenceRate,
             LastUpdate = x.Signal?.CreatedAt
-        })
+        }).ToList(),
+        sortBy, sortDir);
+    
+    var totalCount = sortedResults.Count;
+    
+    var pagedItems = sortedResults
+        .Skip((page - 1) * pageSize)
+        .Take(pageSize)
         .ToList();
 
-    return SortStocks(results, sortBy, sortDir);
+    return new PagedResult<StockListItemDto>
+    {
+        Items = pagedItems,
+        Page = page,
+        PageSize = pageSize,
+        TotalCount = totalCount
+    };
 }
 
 private static List<StockListItemDto> SortStocks(List<StockListItemDto> items, string sortBy, string sortDir)

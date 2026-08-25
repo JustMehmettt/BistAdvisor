@@ -62,7 +62,7 @@
             @if (currentSortBy == "lastupdate") { @(currentSortDir == "asc" ? "▲" : "▼") }
         </th>
     </tr>
-</thead>
+    </thead>
     <tbody>
     @foreach (var stock in Model)
     {
@@ -99,3 +99,22 @@
     }
     </tbody>
 </table>
+
+@{
+    var currentPageNum = (int)(ViewData["CurrentPage"] ?? 1);
+    var totalPagesNum = (int)(ViewData["TotalPages"] ?? 1);
+    var totalCountNum = (int)(ViewData["TotalCount"] ?? 0);
+}
+<div class="d-flex justify-content-between align-items-center mt-3">
+    <span class="text-muted small">Toplam @totalCountNum hisse, @totalPagesNum sayfa</span>
+    <nav>
+        <ul class="pagination mb-0">
+            @for (var i = 1; i <= totalPagesNum; i++)
+            {
+                <li class="page-item @(i == currentPageNum ? "active" : "")">
+                    <a href="#" class="page-link pagination-link" data-page="@i">@i</a>
+                </li>
+            }
+        </ul>
+    </nav>
+</div>

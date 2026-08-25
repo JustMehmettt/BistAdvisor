@@ -93,8 +93,9 @@
     <script>
         let currentSortBy = '@ViewData["CurrentSortBy"]' || 'symbol';
         let currentSortDir = '@ViewData["CurrentSortDir"]' || 'asc';
+        let currentPage = @(ViewData["CurrentPage"] ?? 1);
 
-        async function loadTable(sortBy, sortDir) {
+        async function loadTable(sortBy, sortDir, page) {
             const form = document.getElementById('filter-form');
             const formData = new FormData(form);
             const params = new URLSearchParams();
@@ -105,6 +106,7 @@
 
             params.append('sortBy', sortBy);
             params.append('sortDir', sortDir);
+            params.append('page', page);
 
             const response = await fetch('/Stocks/Table?' + params.toString());
             const html = await response.text();
@@ -112,8 +114,12 @@
             document.getElementById('stock-table-container').innerHTML = html;
             currentSortBy = sortBy;
             currentSortDir = sortDir;
+            currentPage = page;
+
             attachSortHandlers();
-        }
+            attachPaginationHandlers();
+
+            window.scrollTo({ top: 0, behavior: 'smooth' });        }
 
         function attachSortHandlers() {
             document.querySelectorAll('.sort-link').forEach(link => {
@@ -121,16 +127,27 @@
                     e.preventDefault();
                     const column = link.getAttribute('data-column');
                     const newDir = (currentSortBy === column && currentSortDir === 'asc') ? 'desc' : 'asc';
-                    loadTable(column, newDir);
+                    loadTable(column, newDir, 1);
+                });
+            });
+        }
+
+        function attachPaginationHandlers() {
+            document.querySelectorAll('.pagination-link').forEach(link => {
+                link.addEventListener('click', (e) => {
+                    e.preventDefault();
+                    const page = parseInt(link.getAttribute('data-page'));
+                    loadTable(currentSortBy, currentSortDir, page);
                 });
             });
         }
 
         document.getElementById('filter-form').addEventListener('submit', (e) => {
             e.preventDefault();
-            loadTable(currentSortBy, currentSortDir);
+            loadTable(currentSortBy, currentSortDir, 1);
         });
 
         attachSortHandlers();
+        attachPaginationHandlers();
     </script>
 }
