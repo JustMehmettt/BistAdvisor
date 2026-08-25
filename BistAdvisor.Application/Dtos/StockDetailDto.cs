@@ -6,6 +6,7 @@ public class StockDetailDto
     public string CompanyName { get; set; } = string.Empty;
     public string? Sector { get; set; }
     public decimal? LastPrice { get; set; }
+    public decimal? DailyChangeRate { get; set; }
     public string SignalType { get; set; } = string.Empty;
     public decimal? TotalScore { get; set; }
     public decimal? ConfidenceRate { get; set; }

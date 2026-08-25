@@ -88,6 +88,18 @@ public class StocksController : Controller
             .ToListAsync();
 
         var latestSignal = signalSnapshots.FirstOrDefault();
+        
+        decimal? dailyChangeRate = null;
+        if (priceBars.Count >= 2)
+        {
+            var lastClose = priceBars[^1].ClosePrice;
+            var previousClose = priceBars[^2].ClosePrice;
+            
+            if (previousClose != 0)
+            {
+                dailyChangeRate = Math.Round((lastClose - previousClose) / previousClose * 100, 2);
+            }
+        }
 
         var rsiSeries = new RsiCalculator().CalculateSeries(priceBars);
         var macdSeries = new MacdCalculator().CalculateSeries(priceBars);
@@ -126,6 +138,7 @@ public class StocksController : Controller
             CompanyName = stock.CompanyName,
             Sector = stock.Sector,
             LastPrice = priceBars.Count > 0 ? priceBars[^1].ClosePrice : null,
+            DailyChangeRate = dailyChangeRate,
             SignalType = latestSignal?.SignalType.ToString() ?? "InsufficientData",
             TotalScore = latestSignal?.TotalScore,
             ConfidenceRate = latestSignal?.ConfidenceRate,

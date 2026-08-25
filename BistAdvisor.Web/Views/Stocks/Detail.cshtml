@@ -47,6 +47,11 @@ _ => "pill-gray"
             <div class="card-body">
                 <h6 class="text-muted">Son Fiyat</h6>
                 <h3>@(Model.LastPrice?.ToString("F2") ?? "-")</h3>
+                @if (Model.DailyChangeRate.HasValue)
+                {
+                    var changeColor = Model.DailyChangeRate > 0 ? "#1E9E4A" : Model.DailyChangeRate < 0 ? "#D6373E" : "#222";
+                    <div class="small" style="color:@changeColor;">@Model.DailyChangeRate?.ToString("F2")%</div>
+                }
             </div>
         </div>
     </div>
