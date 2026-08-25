@@ -94,4 +94,68 @@ public class PriceDataServiceTests
                 DateTimeOffset.UtcNow.AddDays(-30),
                 DateTimeOffset.UtcNow));
     }
+
+    [Fact]
+    public async Task SyncHistoricalDataAsync_WithTransientFailures_RetriesAndEventuallySucceeds()
+    {
+        await using var context = CreateInMemoryContext();
+        var stock = await SeedStockAsync(context);
+        var provider = new FailingMarketDataProvider(failuresBeforeSuccess: 2);
+        var service = new PriceDataService(context, provider);
+        
+        var insertedCount = await service.SyncHistoricalDataAsync(
+            stock.Symbol,
+            DateTimeOffset.UtcNow.AddDays(-30),
+            DateTimeOffset.UtcNow);
+        
+        Assert.Equal(3, provider.AttemptCount);
+        Assert.True(insertedCount > 0);
+    }
+
+    [Fact]
+    public async Task SyncHistoricalDataAsync_WithPersistentFailures_ThrowsAfterMaxRetries()
+    {
+        await using var context = CreateInMemoryContext();
+        var stock = await SeedStockAsync(context);
+        var provider = new FailingMarketDataProvider(failuresBeforeSuccess: 10);
+        var service = new PriceDataService(context, provider);
+        
+        await Assert.ThrowsAsync<InvalidOperationException>(() =>
+            service.SyncHistoricalDataAsync(
+                stock.Symbol,
+                DateTimeOffset.UtcNow.AddDays(-30),
+                DateTimeOffset.UtcNow));
+        
+        Assert.Equal(3, provider.AttemptCount);
+    }
+
+    [Fact]
+    public async Task SyncHistoricalDataAsync_WithPersistentFailures_LogsFailedRawLog()
+    {
+        await using var context = CreateInMemoryContext();
+        var stock = await SeedStockAsync(context);
+        var provider = new FailingMarketDataProvider(failuresBeforeSuccess: 10);
+        var service = new PriceDataService(context, provider);
+
+        try
+        {
+            await service.SyncHistoricalDataAsync(
+                stock.Symbol,
+                DateTimeOffset.UtcNow.AddDays(-30),
+                DateTimeOffset.UtcNow);
+        }
+        catch (InvalidOperationException)
+        {
+            
+        }
+        
+        var rawLog = await context.MarketDataRawLogs
+            .Where(l => l.StockId == stock.Id)
+            .OrderByDescending(l => l.FetchedAt)
+            .FirstOrDefaultAsync();
+
+        Assert.NotNull(rawLog);
+        Assert.False(rawLog!.WasSuccessful);
+        Assert.Equal(3, rawLog.RetryCount);
+    }
 }
