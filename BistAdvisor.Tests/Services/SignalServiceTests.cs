@@ -103,4 +103,138 @@ public class SignalServiceTests
         Assert.Equal(firstSnapshot.SignalType, secondSnapshot.SignalType);
         Assert.Equal(changeCountAfterFirst, changeCountAfterSecond);
     }
+
+    [Fact]
+    public async Task CalculateAndSaveSignalAsync_WithStaleData_ReturnsStaleDataSignal()
+    {
+        await using var context = CreateInMemoryContext();
+
+        var stock = new Stock
+        {
+            Symbol = "STALE",
+            ProviderSymbol = "STALE.IS",
+            CompanyName = "Stale Test Company",
+            Market = "BIST",
+            IsActive = true,
+            CreatedAt = DateTimeOffset.UtcNow,
+            UpdatedAt = DateTimeOffset.UtcNow,
+        };
+        context.Stocks.Add(stock);
+        await context.SaveChangesAsync();
+
+        var endDate = DateTimeOffset.UtcNow.AddDays(-10);
+        var bars = new List<PriceBar>();
+
+        for (var i = 90; i >= 0; i--)
+        {
+            var barDate = endDate.AddDays(-i);
+
+            if (barDate.DayOfWeek is DayOfWeek.Saturday or DayOfWeek.Sunday)
+            {
+                continue;
+            }
+
+            bars.Add(new PriceBar
+            {
+                StockId = stock.Id,
+                Interval = PriceInterval.Daily,
+                BarTime = new DateTimeOffset(barDate.Date, TimeSpan.Zero),
+                OpenPrice = 100,
+                HighPrice = 101,
+                LowPrice = 99,
+                ClosePrice = 100,
+                AdjustedClosePrice = 100,
+                Volume = 1000,
+                DataSource = "Test",
+                ReceivedAt = DateTimeOffset.UtcNow,
+                CreatedAt = DateTimeOffset.UtcNow
+            });
+        }
+        
+        context.PriceBars.AddRange(bars);
+        await context.SaveChangesAsync();
+        
+        var signalService = new SignalService(context);
+        
+        var snapshot = await signalService.CalculateAndSaveSignalAsync(stock.Symbol);
+        
+        Assert.Equal(SignalType.StaleData, snapshot.SignalType);
+        Assert.Null(snapshot.TotalScore);
+    }
+
+    [Fact]
+    public async Task CalculateAndSaveSignalAsync_WithNoData_ReturnsDataUnavailableSignal()
+    {
+        await using var context = CreateInMemoryContext();
+
+        var stock = new Stock
+        {
+            Symbol = "NODATA",
+            ProviderSymbol = "NODATA.IS",
+            CompanyName = "No Data Test Company",
+            Market = "BIST",
+            IsActive = true,
+            CreatedAt = DateTimeOffset.UtcNow,
+            UpdatedAt = DateTimeOffset.UtcNow
+        };
+
+        context.Stocks.Add(stock);
+        await context.SaveChangesAsync();
+
+        var signalService = new SignalService(context);
+
+        var snapshot = await signalService.CalculateAndSaveSignalAsync(stock.Symbol);
+
+        Assert.Equal(SignalType.DataUnavailable, snapshot.SignalType);
+    }
+    
+    [Fact]
+    public async Task CalculateAndSaveSignalAsync_WithFewerThan60Bars_ReturnsInsufficientDataSignal()
+    {
+        await using var context = CreateInMemoryContext();
+
+        var stock = new Stock
+        {
+            Symbol = "FewBars",
+            ProviderSymbol = "FewBars.IS",
+            CompanyName = "Few Bars Test Company",
+            Market = "BIST",
+            IsActive = true,
+            CreatedAt = DateTimeOffset.UtcNow,
+            UpdatedAt = DateTimeOffset.UtcNow
+        };
+        
+        context.Stocks.Add(stock);
+        await context.SaveChangesAsync();
+
+        var bars = new List<PriceBar>();
+        for (var i = 10; i >= 0; i--)
+        {
+            var barDate = DateTimeOffset.UtcNow.AddDays(-i);
+            bars.Add(new PriceBar
+            {
+                StockId = stock.Id,
+                Interval = PriceInterval.Daily,
+                BarTime = new DateTimeOffset(barDate.Date, TimeSpan.Zero),
+                OpenPrice = 100,
+                HighPrice = 101,
+                LowPrice = 99,
+                ClosePrice = 100,
+                AdjustedClosePrice = 100,
+                Volume = 1000,
+                DataSource = "Test",
+                ReceivedAt = DateTimeOffset.UtcNow,
+                CreatedAt = DateTimeOffset.UtcNow
+            });
+        }
+        
+        context.PriceBars.AddRange(bars);
+        await context.SaveChangesAsync();
+        
+        var signalService = new SignalService(context);
+        
+        var snapshot = await signalService.CalculateAndSaveSignalAsync(stock.Symbol);
+        
+        Assert.Equal(SignalType.InsufficientData, snapshot.SignalType);
+    }
 }

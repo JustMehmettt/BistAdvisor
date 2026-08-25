@@ -41,7 +41,7 @@ public class SignalService : ISignalService
 
         if (priceBars.Count == 0)
         {
-            return await SaveInsufficientSignalAsync(stock, Domain.Entities.SignalType.InsufficientData,
+            return await SaveInsufficientSignalAsync(stock, Domain.Entities.SignalType.DataUnavailable,
                 "Bu hisse senedi için fiyat verisi alınamadı.", now, previousSnapshot, cancellationToken);
         }
 
