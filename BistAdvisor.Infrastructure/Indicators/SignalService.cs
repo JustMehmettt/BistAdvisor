@@ -98,8 +98,21 @@ public class SignalService : ISignalService
                 SellThreshold = ParseDecimal(settingsDict, "Threshold.Sell", -59m)
             };
 
+            decimal volumeRatio = 1m;
+            if (priceBars.Count >= 20)
+            {
+                var last20Bars = priceBars.TakeLast(20).ToList();
+                var averageVolume20 = (decimal)last20Bars.Average(p => p.Volume);
+                var currentVolume = (decimal)priceBars[^1].Volume;
+
+                if (averageVolume20 > 0)
+                {
+                    volumeRatio = Math.Min(1m, currentVolume / averageVolume20);
+                }
+            }
+            
             var signal = new SignalCalculator(weights).Calculate(
-                rsiScore, macdScore, emaScore, bollingerScore, stochasticScore);
+                rsiScore, macdScore, emaScore, bollingerScore, stochasticScore, volumeRatio);
             
             var latestBarTime = priceBars.Count > 0 ? priceBars[^1].BarTime : now;
             var newSignalType = MapSignalType(signal.SignalType);

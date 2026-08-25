@@ -28,7 +28,8 @@ public class SignalCalculator
         int? macdScore,
         int? emaScore,
         int? bollingerScore,
-        int? stochasticScore)
+        int? stochasticScore,
+        decimal volumeRatio = 1m)
     {
         var scores = new[] { rsiScore, macdScore, emaScore, bollingerScore, stochasticScore };
         var availableCount = scores.Count(s => s.HasValue);
@@ -59,7 +60,7 @@ public class SignalCalculator
 
         result.TotalScore = Math.Round(totalScore, 2);
         result.SignalType = ClassifySignal(result.TotalScore.Value);
-        result.ConfidenceRate = CalculateConfidence(scores, result.TotalScore.Value, availableCount);
+        result.ConfidenceRate = CalculateConfidence(scores, availableCount, volumeRatio);
 
         return result;
     }
@@ -76,9 +77,9 @@ public class SignalCalculator
         };
     }
 
-    private static decimal CalculateConfidence(int?[] scores, decimal totalScore, int availableCount)
+    private static decimal CalculateConfidence(int?[] scores, int availableCount, decimal volumeRatio)
     {
-        var direction = Math.Sign(totalScore);
+        var direction = Math.Sign(scores.Where(s => s.HasValue).Sum(s => s!.Value));
 
         var agreeingCount = scores.Count(s => s.HasValue && Math.Sign(s.Value) == direction);
         if (direction == 0)
@@ -88,8 +89,9 @@ public class SignalCalculator
 
         var agreementRatio = (decimal)agreeingCount / availableCount;
         var dataCompletenessRatio = (decimal)availableCount / 5;
+        var clampedVolumeRatio = Math.Clamp(volumeRatio, 0m, 1m);
 
-        var confidence = agreementRatio * 70 + dataCompletenessRatio * 15 + 15;
+        var confidence = agreementRatio * 70 + dataCompletenessRatio * 15 + clampedVolumeRatio * 15;
 
         return Math.Round(Math.Min(confidence, 100), 2);
     }
