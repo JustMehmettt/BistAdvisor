@@ -131,6 +131,7 @@ public class StocksController : Controller
             ConfidenceRate = latestSignal?.ConfidenceRate,
             Explanation = latestSignal?.Explanation,
             LastUpdate = latestSignal?.CreatedAt,
+            AlgorithmVersion = latestSignal?.AlgorithmVersion,
             RsiScore = latestSignal?.RsiScore,
             MacdScore = latestSignal?.MacdScore,
             EmaScore = latestSignal?.EmaScore,

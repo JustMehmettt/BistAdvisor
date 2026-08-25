@@ -11,6 +11,7 @@ public class StockDetailDto
     public decimal? ConfidenceRate { get; set; }
     public string? Explanation { get; set; }
     public DateTimeOffset? LastUpdate { get; set; }
+    public string? AlgorithmVersion { get; set; }
     
     public int? RsiScore { get; set; }
     public int? MacdScore { get; set; }

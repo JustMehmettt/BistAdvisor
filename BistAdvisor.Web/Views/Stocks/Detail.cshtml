@@ -78,9 +78,12 @@ _ => "pill-gray"
 
 @if (!string.IsNullOrWhiteSpace(Model.Explanation))
 {
-<div class="alert alert-light border">
-    <strong>Sinyal Gerekçesi:</strong> @Model.Explanation
-</div>
+    <div class="alert alert-light border">
+        <strong>Sinyal Gerekçesi:</strong> @Model.Explanation
+        @if (!string.IsNullOrWhiteSpace(Model.AlgorithmVersion))
+        {
+            <div class="text-muted small mt-1"><strong>Algoritma Versiyonu:</strong> @Model.AlgorithmVersion</div>        }
+    </div>
 }
 
 <h4 class="mt-4">Fiyat Grafiği (Mum Grafiği)</h4>
