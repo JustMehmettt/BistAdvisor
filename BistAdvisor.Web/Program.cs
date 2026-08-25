@@ -53,10 +53,11 @@ try
 
     var app = builder.Build();
 
-    using (var scope = app.Services.CreateScope())
+    if (!app.Environment.IsEnvironment("Testing"))
     {
-        var db = scope.ServiceProvider.GetRequiredService<ApplicationDbContext>();
-        await DataSeeder.SeedAsync(db);
+        using var scope = app.Services.CreateScope();
+        var dbContext = scope.ServiceProvider.GetRequiredService<ApplicationDbContext>();
+        await DataSeeder.SeedAsync(dbContext);
     }
 
     if (app.Environment.IsDevelopment())
@@ -402,8 +403,8 @@ try
         });
     });
 
-    app.MapPost("api/post/data-sync", async (
-        ApplicationDbContext db, IPriceDataService priceDataService, ISignalService SignalService,
+    app.MapPost("/api/post/data-sync", async (
+        ApplicationDbContext db, IPriceDataService priceDataService, ISignalService signalService,
         IJobLockService jobLockService) =>
     {
         const string jobName = "DataSyncAndSignalCalculation";
@@ -425,11 +426,12 @@ try
                 {
                     await priceDataService.SyncHistoricalDataAsync(
                         stock.Symbol, DateTimeOffset.UtcNow.AddDays(-90), DateTimeOffset.UtcNow);
-                    await SignalService.CalculateAndSaveSignalAsync(stock.Symbol);
+                    await signalService.CalculateAndSaveSignalAsync(stock.Symbol);
                     processedCount++;
                 }
                 catch
                 {
+                    
                 }
             }
 
@@ -445,9 +447,9 @@ try
         }
     });
 
-    app.MapPost("/api/jobs/generate-bulletin", async (IBulletinService BulletinService) =>
+    app.MapPost("/api/jobs/generate-bulletin", async (IBulletinService bulletinService) =>
     {
-        var bulletin = await BulletinService.GenerateDailyBulletinAsync(DateOnly.FromDateTime(DateTime.UtcNow));
+        var bulletin = await bulletinService.GenerateDailyBulletinAsync(DateOnly.FromDateTime(DateTime.UtcNow));
 
         return Results.Ok(new { bulletin.Id, bulletin.Title, bulletin.Status, ItemCount = bulletin.Items.Count });
     });
@@ -519,6 +521,7 @@ try
     }
 
     app.Run();
+    
 }
 catch (Exception ex)
 {
@@ -528,3 +531,4 @@ finally
 {
     Log.CloseAndFlush();
 }
+public partial class Program { }
