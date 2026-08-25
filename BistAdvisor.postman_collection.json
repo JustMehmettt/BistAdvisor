@@ -1,0 +1,218 @@
+{
+  "info": {
+    "name": "BistAdvisor API",
+    "description": "BIST teknik analiz platformu için REST API koleksiyonu. Tüm istekler {{baseUrl}} değişkenini kullanır (varsayılan: http://localhost:5010).",
+    "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json"
+  },
+  "variable": [
+    {
+      "key": "baseUrl",
+      "value": "http://localhost:5010"
+    },
+    {
+      "key": "symbol",
+      "value": "THYAO"
+    }
+  ],
+  "item": [
+    {
+      "name": "Stocks",
+      "item": [
+        {
+          "name": "Get All Stocks",
+          "request": {
+            "method": "GET",
+            "url": {
+              "raw": "{{baseUrl}}/api/stocks?page=1&pageSize=20",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "stocks"],
+              "query": [
+                { "key": "page", "value": "1" },
+                { "key": "pageSize", "value": "20" },
+                { "key": "sector", "value": "", "disabled": true }
+              ]
+            }
+          }
+        },
+        {
+          "name": "Get Stock By Symbol",
+          "request": {
+            "method": "GET",
+            "url": {
+              "raw": "{{baseUrl}}/api/stocks/{{symbol}}",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "stocks", "{{symbol}}"]
+            }
+          }
+        },
+        {
+          "name": "Get Stock Prices",
+          "request": {
+            "method": "GET",
+            "url": {
+              "raw": "{{baseUrl}}/api/stocks/{{symbol}}/prices?page=1&pageSize=30",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "stocks", "{{symbol}}", "prices"],
+              "query": [
+                { "key": "page", "value": "1" },
+                { "key": "pageSize", "value": "30" }
+              ]
+            }
+          }
+        },
+        {
+          "name": "Get Stock Indicators",
+          "request": {
+            "method": "GET",
+            "url": {
+              "raw": "{{baseUrl}}/api/stocks/{{symbol}}/indicators?page=1&pageSize=30",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "stocks", "{{symbol}}", "indicators"],
+              "query": [
+                { "key": "page", "value": "1" },
+                { "key": "pageSize", "value": "30" }
+              ]
+            }
+          }
+        },
+        {
+          "name": "Get Stock Signals",
+          "request": {
+            "method": "GET",
+            "url": {
+              "raw": "{{baseUrl}}/api/stocks/{{symbol}}/signals?page=1&pageSize=20",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "stocks", "{{symbol}}", "signals"],
+              "query": [
+                { "key": "page", "value": "1" },
+                { "key": "pageSize", "value": "20" }
+              ]
+            }
+          }
+        }
+      ]
+    },
+    {
+      "name": "Signals",
+      "item": [
+        {
+          "name": "Get Latest Signals",
+          "request": {
+            "method": "GET",
+            "url": {
+              "raw": "{{baseUrl}}/api/signals/latest?page=1&pageSize=20",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "signals", "latest"],
+              "query": [
+                { "key": "page", "value": "1" },
+                { "key": "pageSize", "value": "20" },
+                { "key": "signalType", "value": "Buy", "disabled": true }
+              ]
+            }
+          }
+        },
+        {
+          "name": "Get Signal Changes",
+          "request": {
+            "method": "GET",
+            "url": {
+              "raw": "{{baseUrl}}/api/signals/changes?page=1&pageSize=20",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "signals", "changes"],
+              "query": [
+                { "key": "page", "value": "1" },
+                { "key": "pageSize", "value": "20" },
+                { "key": "symbol", "value": "", "disabled": true }
+              ]
+            }
+          }
+        }
+      ]
+    },
+    {
+      "name": "Bulletins",
+      "item": [
+        {
+          "name": "Get Today's Bulletin",
+          "request": {
+            "method": "GET",
+            "url": {
+              "raw": "{{baseUrl}}/api/bulletins/today",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "bulletins", "today"]
+            }
+          }
+        },
+        {
+          "name": "Get Bulletin By Date",
+          "request": {
+            "method": "GET",
+            "url": {
+              "raw": "{{baseUrl}}/api/bulletins/2026-08-24",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "bulletins", "2026-08-24"]
+            }
+          }
+        }
+      ]
+    },
+    {
+      "name": "Jobs",
+      "item": [
+        {
+          "name": "Get Job History",
+          "request": {
+            "method": "GET",
+            "url": {
+              "raw": "{{baseUrl}}/api/jobs?page=1&pageSize=30",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "jobs"],
+              "query": [
+                { "key": "page", "value": "1" },
+                { "key": "pageSize", "value": "30" }
+              ]
+            }
+          }
+        },
+        {
+          "name": "Trigger Data Sync",
+          "request": {
+            "method": "POST",
+            "url": {
+              "raw": "{{baseUrl}}/api/jobs/data-sync",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "jobs", "data-sync"]
+            }
+          }
+        },
+        {
+          "name": "Trigger Bulletin Generation",
+          "request": {
+            "method": "POST",
+            "url": {
+              "raw": "{{baseUrl}}/api/jobs/generate-bulletin",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "jobs", "generate-bulletin"]
+            }
+          }
+        }
+      ]
+    },
+    {
+      "name": "System",
+      "item": [
+        {
+          "name": "Get Data Health",
+          "request": {
+            "method": "GET",
+            "url": {
+              "raw": "{{baseUrl}}/api/system/data-health",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "system", "data-health"]
+            }
+          }
+        }
+      ]
+    }
+  ]
+}
