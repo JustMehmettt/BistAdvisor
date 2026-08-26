@@ -35,7 +35,7 @@ Sistem, bir arka plan servisi aracılığıyla periyodik olarak (varsayılan 15 
 
 - **Gerçek piyasa verisi**: Yahoo Finance üzerinden BIST hisselerinin güncel/geçmiş fiyat verileri; geliştirme/test amaçlı sahte (mock) veri sağlayıcısı ile anında değiştirilebilir mimari
 - **5 teknik indikatör**: RSI(14), MACD(12,26,9), EMA(20/50), Bollinger Bantları(20,2), Stochastic Oscillator(14,3) — periyotlar sistem ayarlarından yapılandırılabilir
-- **Ağırlıklı sinyal skorlama**: -100 ile +100 arası teknik skor; uyum oranı, veri güncelliği ve gerçek işlem hacmi doğrulamasını birleştiren güven oranı hesaplaması; gerekçeli açıklama metni
+- **Ağırlıklı sinyal skorlama**: -100 ile +100 arası teknik skor; uyum oranı, veri güncelliği ve gerçek işlem hacmi doğrulamasını birleştiren güven oranı hesaplaması; gerekçeli açıklama metni (Türkçe)
 - **Dört ayrı veri kalitesi durumu**: Yetersiz Veri, Güncel Olmayan Veri, Veri Alınamadı, Hesaplama Hatası — sinyal üretimi bu durumlarda güvenli şekilde engellenir
 - **Sinyal değişikliği takibi**: Bir hissenin sinyali değiştiğinde otomatik kayıt ve tarihçe
 - **Algoritma versiyonlama**: Her sinyal kaydı, o an kullanılan ağırlık/eşik değerlerinin anlık görüntüsünü (snapshot) JSON olarak saklar
@@ -45,7 +45,7 @@ Sistem, bir arka plan servisi aracılığıyla periyodik olarak (varsayılan 15 
 - **Günlük bülten**: Sinyali değişen hisseleri gerekçeleriyle listeleyen, otomatik üretilen bülten; aynı gün için tekrar oluşturmada eski bülten silinmeyip revize durumuna alınır; hisse kodu/sinyal tipi/minimum skora göre filtrelenebilir; sadece bültenin bulunduğu günlerin seçilebildiği özel bir takvim bileşeni
 - **Web arayüzü**: Dashboard, filtrelenebilir/sıralanabilir/sayfalanan hisse listesi, tam indikatör grafikli (mum grafiği, EMA/Bollinger, RSI, MACD, Stochastic) hisse detay sayfası, sinyal geçmişi, günlük bülten, geriye dönük test (backtest) ve şifre korumalı yönetim paneli
 - **REST API**: 13 uç nokta ile hisse, fiyat, indikatör, sinyal, bülten ve iş verilerine sayfalama/filtrelemeyle erişim; Swagger dokümantasyonu ve hazır Postman koleksiyonu
-- **Yönetim paneli**: Manuel veri toplama/bülten oluşturma tetikleme (asenkron, geri bildirimli), hisse aktif/pasif yönetimi, sistem ayarları görüntüleme, iş takip logları, veri kaynağı bağlantı testi
+- **Yönetim paneli**: Kullanıcı adı/şifre korumalı, gezinme menüsünde bağlantısı gösterilmeyen (yalnızca doğrudan adresle erişilen) gizli panel; manuel veri toplama/bülten oluşturma tetikleme (asenkron, geri bildirimli), hisse aktif/pasif yönetimi, sistem ayarları görüntüleme, iş takip logları, piyasa durumu, veri kaynağı bağlantı testi
 - **Geriye dönük test (backtest)**: Geçmiş sinyal verilerine dayalı basitleştirilmiş al-sat simülasyonu; toplam işlem, kazanma oranı, ortalama/toplam getiri özeti
 - **Yapılandırılmış loglama**: Serilog ile hem konsola hem günlük olarak dönen dosyalara (14 gün saklama) loglama
 - **Kapsamlı test paketi**: 57 birim ve entegrasyon testi (indikatör hesaplama, puanlama, veri senkronizasyonu, sinyal üretimi, yeniden deneme mekanizması, hata izolasyonu, bülten kuralları, API filtreleme/sayfalama)
@@ -61,7 +61,7 @@ Sistem, bir arka plan servisi aracılığıyla periyodik olarak (varsayılan 15 
 | Arka plan işleri | .NET `BackgroundService` |
 | Piyasa verisi | Yahoo Finance (`OoplesFinance.YahooFinanceAPI`) |
 | Loglama | Serilog (konsol + dönen dosya) |
-| Kimlik doğrulama | Çerez tabanlı, şifre korumalı yönetim paneli girişi |
+| Kimlik doğrulama | Çerez tabanlı, kullanıcı adı/şifre korumalı yönetim paneli girişi |
 | Test | xUnit, EF Core InMemory, `Microsoft.AspNetCore.Mvc.Testing` |
 | API dokümantasyonu | Swagger / OpenAPI, Postman koleksiyonu |
 
@@ -73,7 +73,7 @@ Proje, katmanlı (layered) bir mimariyle, altı ayrı .NET projesinden oluşur:
 BistAdvisor.sln
 ├── BistAdvisor.Domain          → Entity'ler, enum'lar (Stock, PriceBar, SignalSnapshot, DailyBulletin, ApplicationSetting, ...)
 ├── BistAdvisor.Application     → Servis arayüzleri, iş mantığı (indikatör hesaplama, sinyal puanlama, DTO'lar)
-├── BistAdvisor.Infrastructure  → EF Core DbContext, veri sağlayıcı implementasyonları, servis implementasyonları (Signal, Bulletin, Price, JobLock, MarketHours)
+├── BistAdvisor.Infrastructure  → EF Core DbContext, veri sağlayıcı implementasyonları, servis implementasyonları (Signal, Bulletin, Price, JobLock, MarketHours, Backtest)
 ├── BistAdvisor.Worker          → Periyodik veri toplama ve sinyal hesaplama (arka plan servisi)
 ├── BistAdvisor.Web             → Web API uç noktaları + MVC web arayüzü
 └── BistAdvisor.Tests           → xUnit birim ve entegrasyon testleri
@@ -294,12 +294,13 @@ graph TD
    cd BistAdvisor
    ```
 
-2. **Veritabanı bağlantısını ve yönetim paneli şifresini yapılandırın**
+2. **Veritabanı bağlantısını ve yönetim paneli kimlik bilgilerini yapılandırın**
 
-   `BistAdvisor.Web/appsettings.example.json` dosyasını `BistAdvisor.Web/appsettings.Development.json` olarak kopyalayın ve kendi bilgilerinizi girin:
+   `BistAdvisor.Web/appsettings.example.json` dosyasını `BistAdvisor.Web/appsettings.Development.json` olarak kopyalayın ve kendi bilgilerinizi girin (`AdminUsername` belirtilmezse varsayılan olarak `admin` kullanılır):
 
    ```json
    {
+     "AdminUsername": "admin",
      "AdminPassword": "kendi-şifreniz",
      "ConnectionStrings": {
        "DefaultConnection": "Server=localhost;Database=BistAdvisorDb_Dev;Trusted_Connection=True;TrustServerCertificate=True;"
@@ -308,6 +309,8 @@ graph TD
    ```
 
    Aynı bağlantı dizesini `BistAdvisor.Worker/appsettings.json` dosyasına da girin.
+
+   > **Not:** Yönetim paneline (`/Admin`) erişim bağlantısı gezinme menüsünde gösterilmez; panele yalnızca adresi doğrudan yazarak ve ardından kullanıcı adı/şifre ile giriş yaparak ulaşılabilir.
 
 3. **EF Core araçlarını kurun (yoksa)**
 
@@ -350,7 +353,7 @@ dotnet run --project BistAdvisor.Web
 
 - Web arayüzü: `http://localhost:5010/`
 - Swagger API dokümantasyonu: `http://localhost:5010/swagger`
-- Yönetim paneli (şifre korumalı): `http://localhost:5010/Admin`
+- Yönetim paneli (kullanıcı adı/şifre korumalı, gezinme menüsünde bağlantısı yoktur): `http://localhost:5010/Admin`
 
 ### 2. Arka plan servisini başlatın (ayrı bir terminalde)
 
@@ -380,7 +383,7 @@ Worker, başlangıçta ve ardından yapılandırılan aralıkla (varsayılan 15 
 | POST | `/api/jobs/generate-bulletin` | Günlük bülteni manuel oluşturur |
 | GET | `/api/system/data-health` | Sistem veri sağlığı özeti (aktif/güncel hisse sayısı, son senkronizasyon, hata sayısı) |
 
-Tam, interaktif dokümantasyon için uygulama çalışırken `/swagger` adresini ziyaret edin.
+Tam, interaktif dokümantasyon için uygulama çalışırken `/swagger` adresini ziyaret edin. API'nin sistemsel hata/durum mesajları, uluslararası entegrasyon kolaylığı gözetilerek İngilizce sunulmaktadır.
 
 ## Postman Koleksiyonu
 
@@ -392,11 +395,11 @@ Proje kök dizinindeki `BistAdvisor.postman_collection.json` dosyası, yukarıda
 |---|---|---|
 | Dashboard | `/` | Sinyal dağılım özeti, en yüksek/düşük skorlu 5 hisse, son sinyal değişiklikleri, veri toplama durumu, bugünün bültenine erişim |
 | Hisse Listesi | `/Stocks` | Filtrelenebilir (sektör, sinyal tipi, min. skor, min. güven oranı, güncel olmayanları gizleme), sıralanabilir, sayfalanan hisse tablosu |
-| Hisse Detay | `/Stocks/Detail/{symbol}` | Mum grafiği, EMA/Bollinger çizgi grafiği, RSI/MACD/Stochastic grafikleri, indikatör puan dağılım tablosu, sinyal gerekçesi, algoritma versiyonu, sinyal geçmişi |
+| Hisse Detay | `/Stocks/Detail/{symbol}` | Mum grafiği, EMA/Bollinger çizgi grafiği, RSI/MACD/Stochastic grafikleri, indikatör puan dağılım tablosu, sinyal gerekçesi, algoritma versiyonu, günlük değişim oranı, sinyal geçmişi |
 | Günlük Bülten | `/Bulletin` | Sinyal türüne göre gruplanmış günlük bülten; hisse kodu/sinyal tipi/min. skor filtreleri; sadece bültenin bulunduğu günlerin seçilebildiği özel takvim |
 | Sinyal Geçmişi | `/SignalHistory` | Tüm hisselerdeki sinyal değişikliklerinin genel akışı; hisse ve sinyal tipine göre filtrelenebilir |
 | Backtest | `/Backtest` | Geçmiş sinyallere dayalı basitleştirilmiş al-sat simülasyonu ve performans özeti |
-| Yönetim Paneli | `/Admin` | Manuel veri/bülten tetikleme, hisse yönetimi, sistem ayarları görüntüleme, iş logları, piyasa durumu, veri kaynağı bağlantı testi — şifre korumalı |
+| Yönetim Paneli | `/Admin` | Manuel veri/bülten tetikleme, hisse yönetimi, sistem ayarları görüntüleme, iş logları, piyasa durumu, veri kaynağı bağlantı testi — kullanıcı adı/şifre korumalı, gezinme menüsünde bağlantısı gösterilmez |
 
 ## Testler
 
@@ -419,6 +422,8 @@ Test kapsamı:
 - Aynı gün için mükerrer aktif bülten oluşturulmasının engellenmesi ve bülten içeriğine doğru hisselerin dahil edilmesi
 - API filtreleme ve sayfalamanın `WebApplicationFactory` ile uçtan uca (entegrasyon) test edilmesi
 
+Detaylı test senaryoları ve sonuçları için `TestScenariosAndResults.md` dosyasına bakın.
+
 ## Bilinen Sınırlamalar
 
 - **Veri kaynağı**: Yahoo Finance, resmi/lisanslı bir BIST veri sağlayıcısı değildir; veriler gecikmeli/halka açık kaynaklardan gelir. Gerçek zamanlı, lisanslı veri için Borsa İstanbul'un resmi API'si veya ticari bir veri sağlayıcısı gereklidir.
@@ -426,7 +431,9 @@ Test kapsamı:
 - **Nadir veri boşlukları**: Bazı düşük hacimli hisselerde Yahoo Finance'in geçici veri sağlayamaması durumunda, ilgili hissenin senkronizasyonu üç denemeden sonra o döngüde başarısız olabilir (hata izolasyonu sayesinde diğer hisseler etkilenmez, `DataFetchLogs` ve `MarketDataRawLogs` tablolarında kayıt altına alınır).
 - **Bellek içi filtreleme**: Hisse Listesi ve Bülten gibi bazı ekranlarda, EF Core'un karmaşık `GroupBy`+`First` sorgularını doğrudan SQL'e çeviremediği durumlar için, ilgili veriler belleğe çekilip orada filtreleniyor. Bu yaklaşım mevcut ölçekte (100 hisse) performans sorunu yaratmaz; veri hacmi önemli ölçüde büyürse veritabanı seviyesinde optimize edilmiş sorgulara geçiş değerlendirilmelidir.
 - **Piyasa takvimi**: Borsa işlem saatleri kontrolü hafta içi/hafta sonu ve saat aralığına dayanır; resmi tatil günleri dikkate alınmaz.
+- **İş takip kayıtlarının basitleştirilmesi**: `DataFetchLog` tablosundaki `RetrievedRowCount` alanı, veri servisinin dış arayüzü değiştirilmediği için `InsertedRowCount` ile eşit kabul edilir; `UpdatedRowCount` sistemde "güncelleme" kavramı bulunmadığından her zaman sıfırdır.
 - **Backtest basitleştirmesi**: Geriye dönük test modülü komisyon, kayma (slippage) ve gerçek emir gecikmesini hesaba katmaz; yalnızca eğitim/analiz amaçlıdır.
+- **Repository deseni kullanılmamıştır**: Veri erişimi, ayrı bir repository katmanı yerine servis ve controller sınıflarında doğrudan `DbContext` üzerinden yapılır. Bu, projenin mevcut ölçeğinde bilinçli bir tercihtir; test edilebilirlik ihtiyacı EF Core InMemory veritabanıyla zaten karşılanmaktadır.
 
 ## Proje Kapsamı Dışında Bırakılanlar
 
