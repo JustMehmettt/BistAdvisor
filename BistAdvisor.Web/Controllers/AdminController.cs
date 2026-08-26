@@ -57,7 +57,10 @@ public class AdminController : Controller
             .OrderByDescending(l => l.StartedAt)
             .Take(10)
             .ToListAsync();
-
+        
+        var marketHoursService = HttpContext.RequestServices.GetRequiredService<IMarketHoursService>();
+        
+        ViewData["IsMarketOpen"] = await marketHoursService.IsMarketOpenAsync();
         ViewData["Stocks"] = stocks;
         ViewData["RecentLogs"] = recentLogs;
         ViewData["FailedLogs"] = failedLogs;

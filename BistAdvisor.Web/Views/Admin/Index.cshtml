@@ -9,6 +9,13 @@
 
 <h1 class="mb-4">Yönetim ve Log Sayfası</h1>
 
+@{
+    var isMarketOpen = (bool)(ViewData["IsMarketOpen"] ?? false);
+}
+<p class="text-muted small mb-2">
+    Piyasa Durumu:
+    <span class="pill @(isMarketOpen ? "pill-green" : "pill-gray")">@(isMarketOpen ? "Açık" : "Kapalı")</span>
+</p>
 <div class="row g-3 mb-4">
     <div class="col-md-4">
         <button type="button" class="btn btn-primary w-100" id="btn-sync" onclick="runAdminAction('RunDataSync', 'btn-sync', 'msg-sync')">

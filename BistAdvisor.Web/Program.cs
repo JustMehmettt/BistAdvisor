@@ -50,7 +50,8 @@ try
     builder.Services.AddScoped<ISignalService, SignalService>();
     builder.Services.AddScoped<IBulletinService, BulletinService>();
     builder.Services.AddScoped<IJobLockService, JobLockService>();
-
+    builder.Services.AddScoped<IMarketHoursService, MarketHoursService>();
+    
     var app = builder.Build();
 
     if (!app.Environment.IsEnvironment("Testing"))

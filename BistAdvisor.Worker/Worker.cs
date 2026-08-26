@@ -51,77 +51,85 @@ public class Worker : BackgroundService
     }
 
     private async Task RunCycleAsync(CancellationToken stoppingToken)
-{
-    using var scope = _scopeFactory.CreateScope();
+     {
+         using var scope = _scopeFactory.CreateScope();
+ 
+         var jobLockService = scope.ServiceProvider.GetRequiredService<IJobLockService>();
+         const string jobName = "DataSyncAndSignalCalculation";
+ 
+         var lockAcquired = await jobLockService.TryAcquireLockAsync(jobName, stoppingToken);
+ 
+         if (!lockAcquired)
+         {
+             _logger.LogWarning("Could not acquire job lock '{JobName}'; another process is already running it. Skipping this cycle.", jobName);
+             return;
+         }
+ 
+         try
+         {
+             var dbContext = scope.ServiceProvider.GetRequiredService<ApplicationDbContext>();
+             var priceDataService = scope.ServiceProvider.GetRequiredService<IPriceDataService>();
+             var signalService = scope.ServiceProvider.GetRequiredService<ISignalService>();
+             
+             var marketHoursService = scope.ServiceProvider.GetRequiredService<IMarketHoursService>();
+             var isMarketOpen = await marketHoursService.IsMarketOpenAsync(stoppingToken);
 
-    var jobLockService = scope.ServiceProvider.GetRequiredService<IJobLockService>();
-    const string jobName = "DataSyncAndSignalCalculation";
-
-    var lockAcquired = await jobLockService.TryAcquireLockAsync(jobName, stoppingToken);
-
-    if (!lockAcquired)
-    {
-        _logger.LogWarning("Could not acquire job lock '{JobName}'; another process is already running it. Skipping this cycle.", jobName);
-        return;
-    }
-
-    try
-    {
-        var dbContext = scope.ServiceProvider.GetRequiredService<ApplicationDbContext>();
-        var priceDataService = scope.ServiceProvider.GetRequiredService<IPriceDataService>();
-        var signalService = scope.ServiceProvider.GetRequiredService<ISignalService>();
-
-        var activeStocks = await dbContext.Stocks
-            .Where(s => s.IsActive)
-            .ToListAsync(stoppingToken);
-
-        foreach (var stock in activeStocks)
-        {
-            var log = new DataFetchLog
-            {
-                JobName = jobName,
-                StockId = stock.Id,
-                StartedAt = DateTimeOffset.UtcNow,
-                Status = JobStatus.Success
-            };
-
-            try
-            {
-                var insertedCount = await priceDataService.SyncHistoricalDataAsync(
-                    stock.Symbol,
-                    DateTimeOffset.UtcNow.AddDays(-90),
-                    DateTimeOffset.UtcNow,
-                    stoppingToken);
-
-                await signalService.CalculateAndSaveSignalAsync(stock.Symbol, stoppingToken);
-
-                log.InsertedRowCount = insertedCount;
-                log.RetrievedRowCount = insertedCount;
-                log.UpdatedRowCount = 0;
-                log.Status = JobStatus.Success;
-                log.CompletedAt = DateTimeOffset.UtcNow;
-
-                _logger.LogInformation("Successfully processed {Symbol}", stock.Symbol);
-            }
-            catch (Exception ex)
-            {
-                log.Status = JobStatus.Failed;
-                log.ErrorMessage = ex.Message;
-                log.CompletedAt = DateTimeOffset.UtcNow;
-
-                _logger.LogError(ex, "Failed to process {Symbol}, continuing with next stock", stock.Symbol);
-            }
-            finally
-            {
-                dbContext.DataFetchLogs.Add(log);
-            }
-        }
-
-        await dbContext.SaveChangesAsync(stoppingToken);
-    }
-    finally
-    {
-        await jobLockService.ReleaseLockAsync(jobName, stoppingToken);
-    }
-}
-}
+             if (!isMarketOpen)
+             {
+                 _logger.LogInformation("Market is currently closed (outside BIST trading hours). Proceeding with sync anyway to keep historical data up to date.");
+             }
+ 
+             var activeStocks = await dbContext.Stocks
+                 .Where(s => s.IsActive)
+                 .ToListAsync(stoppingToken);
+ 
+             foreach (var stock in activeStocks)
+             {
+                 var log = new DataFetchLog
+                 {
+                     JobName = jobName,
+                     StockId = stock.Id,
+                     StartedAt = DateTimeOffset.UtcNow,
+                     Status = JobStatus.Success
+                 };
+ 
+                 try
+                 {
+                     var insertedCount = await priceDataService.SyncHistoricalDataAsync(
+                         stock.Symbol,
+                         DateTimeOffset.UtcNow.AddDays(-90),
+                         DateTimeOffset.UtcNow,
+                         stoppingToken);
+ 
+                     await signalService.CalculateAndSaveSignalAsync(stock.Symbol, stoppingToken);
+ 
+                     log.InsertedRowCount = insertedCount;
+                     log.RetrievedRowCount = insertedCount;
+                     log.UpdatedRowCount = 0;
+                     log.Status = JobStatus.Success;
+                     log.CompletedAt = DateTimeOffset.UtcNow;
+ 
+                     _logger.LogInformation("Successfully processed {Symbol}", stock.Symbol);
+                 }
+                 catch (Exception ex)
+                 {
+                     log.Status = JobStatus.Failed;
+                     log.ErrorMessage = ex.Message;
+                     log.CompletedAt = DateTimeOffset.UtcNow;
+ 
+                     _logger.LogError(ex, "Failed to process {Symbol}, continuing with next stock", stock.Symbol);
+                 }
+                 finally
+                 {
+                     dbContext.DataFetchLogs.Add(log);
+                 }
+             }
+ 
+             await dbContext.SaveChangesAsync(stoppingToken);
+         }
+         finally
+         {
+             await jobLockService.ReleaseLockAsync(jobName, stoppingToken);
+         }
+     }
+ }

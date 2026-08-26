@@ -28,6 +28,7 @@ try
     builder.Services.AddScoped<IPriceDataService, PriceDataService>();
     builder.Services.AddScoped<ISignalService, SignalService>();
     builder.Services.AddScoped<IJobLockService, JobLockService>();
+    builder.Services.AddScoped<IMarketHoursService, MarketHoursService>();
 
     builder.Services.AddHostedService<Worker>();
 
