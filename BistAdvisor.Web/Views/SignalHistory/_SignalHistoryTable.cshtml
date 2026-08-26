@@ -1,0 +1,79 @@
+﻿@using BistAdvisor.Application.Dtos
+@model List<SignalChangeDto>
+
+@{
+    var page = (int)(ViewData["Page"] ?? 1);
+    var totalPages = (int)(ViewData["TotalPages"] ?? 1);
+
+    string PillClass(string signalType)
+    {
+        return signalType switch
+        {
+            "StrongBuy" or "Buy" => "pill-green",
+            "Sell" or "StrongSell" => "pill-red",
+            _ => "pill-gray"
+        };
+    }
+
+    string GroupLabel(string signalType)
+    {
+        return signalType switch
+        {
+            "StrongBuy" => "Güçlü Al",
+            "Buy" => "Al",
+            "Neutral" => "Nötr",
+            "Sell" => "Sat",
+            "StrongSell" => "Güçlü Sat",
+            _ => signalType
+        };
+    }
+}
+
+@if (Model.Count == 0)
+{
+    <div class="alert alert-info">Henüz sinyal değişikliği kaydı bulunmuyor.</div>
+}
+else
+{
+    <table class="table-dynamic">
+        <thead>
+            <tr>
+                <th>Tarih</th>
+                <th>Hisse</th>
+                <th>Şirket</th>
+                <th>Önceki Sinyal</th>
+                <th>Yeni Sinyal</th>
+                <th>Önceki Skor</th>
+                <th>Yeni Skor</th>
+            </tr>
+        </thead>
+        <tbody>
+            @foreach (var change in Model)
+            {
+                <tr>
+                    <td>@change.ChangeTime.ToLocalTime().ToString("dd.MM.yyyy HH:mm")</td>
+                    <td><a href="/Stocks/Detail/@change.Symbol" class="text-decoration-none" style="color:#0A8DD0; font-weight:600;">@change.Symbol</a></td>
+                    <td>@change.CompanyName</td>
+                    <td><span class="pill @PillClass(change.PreviousSignalType)">@GroupLabel(change.PreviousSignalType)</span></td>
+                    <td><span class="pill @PillClass(change.NewSignalType)">@GroupLabel(change.NewSignalType)</span></td>
+                    <td>@(change.PreviousScore?.ToString("F2") ?? "-")</td>
+                    <td>@(change.NewScore?.ToString("F2") ?? "-")</td>
+                </tr>
+            }
+        </tbody>
+    </table>
+
+    @if (totalPages > 1)
+    {
+        <nav class="mt-3">
+            <ul class="pagination mb-0">
+                @for (var i = 1; i <= totalPages; i++)
+                {
+                    <li class="page-item @(i == page ? "active" : "")">
+                        <a href="#" class="page-link signal-pagination-link" data-page="@i">@i</a>
+                    </li>
+                }
+            </ul>
+        </nav>
+    }
+}
