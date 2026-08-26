@@ -35,6 +35,7 @@ public class SignalSnapshot
 
     public string? Explanation { get; set; }
     public string AlgorithmVersion { get; set; } = "v1.0";
+    public string? SettingsSnapshot { get; set; }
 
     public DateTimeOffset CreatedAt { get; set; }
 }

@@ -132,6 +132,18 @@ public class SignalService : ISignalService
                 SignalType = newSignalType,
                 Explanation = BuildExplanation(stockSymbol, signal, rsi, macd, ema),
                 AlgorithmVersion = "v1.0",
+                SettingsSnapshot = System.Text.Json.JsonSerializer.Serialize(new
+                {
+                    weights.RsiWeight,
+                    weights.MacdWeight,
+                    weights.EmaWeight,
+                    weights.BollingerWeight,
+                    weights.StochasticWeight,
+                    weights.StrongBuyThreshold,
+                    weights.BuyThreshold,
+                    weights.NeutralThreshold,
+                    weights.SellThreshold
+                }),
                 CreatedAt = now
             };
 

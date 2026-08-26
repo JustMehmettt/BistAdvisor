@@ -34,7 +34,7 @@ try
     var host = builder.Build();
     host.Run();
 }
-catch (Exception ex)
+catch (Exception ex) when(ex is not Microsoft.Extensions.Hosting.HostAbortedException)
 {
     Log.Fatal(ex, "Worker terminated unexpectedly");
 }

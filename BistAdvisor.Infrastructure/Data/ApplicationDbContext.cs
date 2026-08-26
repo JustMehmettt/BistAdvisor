@@ -80,6 +80,7 @@ public class ApplicationDbContext : DbContext
             entity.Property(s => s.TotalScore).HasColumnType("decimal(6,2)");
             entity.Property(s => s.ConfidenceRate).HasColumnType("decimal(5,2)");
             entity.Property(s => s.AlgorithmVersion).HasMaxLength(20).IsRequired();
+            entity.Property(s => s.SettingsSnapshot).HasColumnType("nvarchar(max)");
 
             entity.HasOne(s => s.Stock)
                 .WithMany()
