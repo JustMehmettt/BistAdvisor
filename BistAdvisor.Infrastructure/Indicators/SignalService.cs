@@ -296,17 +296,17 @@ public class SignalService : ISignalService
     {
         if (signal.SignalType == Application.Indicators.SignalType.InsufficientData)
         {
-            return $"Not enough data available to generate a signal for {symbol}.";
+            return $"{symbol} için sinyal üretmeye yeterli veri bulunmuyor.";
         }
 
         var totalScoreText = signal.TotalScore?.ToString("F2", CultureInfo.InvariantCulture);
         var confidenceText = signal.ConfidenceRate?.ToString("F1", CultureInfo.InvariantCulture);
         var rsiText = rsi?.ToString("F2", CultureInfo.InvariantCulture);
 
-        return $"{symbol} has a technical score of {totalScoreText} with a confidence rate of " +
-               $"{confidenceText}%. RSI is at {rsiText}. " +
-               $"MACD line is {(macd.MacdLine > macd.SignalLine ? "above" : "below")} the signal line. " +
-               $"Current price is {(ema.CurrentPrice > ema.Ema20 ? "above" : "below")} EMA20.";
+        return $"{symbol} hissesi {totalScoreText} teknik skor ve %{confidenceText} güven oranıyla sinyal üretti. " +
+               $"RSI değeri {rsiText}. " +
+               $"MACD çizgisi sinyal çizgisinin {(macd.MacdLine > macd.SignalLine ? "üzerinde" : "altında")}. " +
+               $"Güncel fiyat EMA20'nin {(ema.CurrentPrice > ema.Ema20 ? "üzerinde" : "altında")}.";
     }
 
     private static decimal ParseDecimal(Dictionary<string, string> settings, string key, decimal defaultValue)

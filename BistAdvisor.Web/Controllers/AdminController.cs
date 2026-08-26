@@ -83,7 +83,7 @@ public async Task<IActionResult> RunDataSync()
         return Json(new
         {
             success = false,
-            message = "A data synchronization job is already running. Please try again shortly.",
+            message = "Bir veri senkronizasyon işlemi zaten çalışıyor. Lütfen kısa bir süre sonra tekrar deneyin.",
             durationSeconds = "0.00"
         });
     }
@@ -138,7 +138,7 @@ public async Task<IActionResult> RunDataSync()
     return Json(new
     {
         success = true,
-        message = "Data synchronization completed.",
+        message = "Veri senkronizasyonu tamamlandı.",
         durationSeconds = stopwatch.Elapsed.TotalSeconds.ToString("F2", CultureInfo.InvariantCulture)
     });
 }
@@ -155,7 +155,7 @@ public async Task<IActionResult> RunDataSync()
         return Json(new
         {
             success = true,
-            message = "Bulletin generated.",
+            message = "Bülten oluşturuldu.",
             durationSeconds = stopwatch.Elapsed.TotalSeconds.ToString("F2", CultureInfo.InvariantCulture)
         });
     }
@@ -198,7 +198,7 @@ public async Task<IActionResult> RunDataSync()
         return Json(new
         {
             success = isAvailable,
-            message = isAvailable ? "Data source connection successful." : "Data source connection failed.",
+            message = isAvailable ? "Veri kaynağı bağlantısı başarılı." : "Veri kaynağı bağlantısı başarısız.",
             durationSeconds = stopwatch.Elapsed.TotalSeconds.ToString("F2", CultureInfo.InvariantCulture)
         });
     }

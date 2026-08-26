@@ -96,15 +96,15 @@ public class BulletinService : IBulletinService
         var strongSellCount = items.Count(i => i.SignalType == SignalType.StrongSell);
         var changedCount = changedStockIds.Count; 
 
-        var summary = $"{strongBuyCount} strong buy, {buyCount} buy, {sellCount} sell, {strongSellCount} strong sell signals. " +
-                      $"{changedCount} stocks changed signal today.";
+        var summary = $"{strongBuyCount} güçlü al, {buyCount} al, {sellCount} sat, {strongSellCount} güçlü sat sinyali. " +
+                      $"Bugün {changedCount} hissenin sinyali değişti.";
 
         var content = BuildBulletinContent(bulletinDate, items, strongBuyCount, buyCount, sellCount, strongSellCount);
 
         var bulletin = new DailyBulletin
         {
             BulletinDate = bulletinDate,
-            Title = $"Daily Technical Analysis Bulletin - {bulletinDate:dd.MM.yyyy}",
+            Title = $"Günlük Teknik Analiz Bülteni - {bulletinDate:dd.MM.yyyy}",
             Summary = summary,
             Content = content,
             Status = BulletinStatus.Active,
@@ -124,9 +124,17 @@ public class BulletinService : IBulletinService
     {
         var score = signal.TotalScore?.ToString("F2", CultureInfo.InvariantCulture) ?? "-";
         var confidence = signal.ConfidenceRate?.ToString("F1", CultureInfo.InvariantCulture) ?? "-";
+        var signalTypeText = signal.SignalType switch
+        {
+            Domain.Entities.SignalType.StrongBuy => "Güçlü Al",
+            Domain.Entities.SignalType.Buy => "Al",
+            Domain.Entities.SignalType.Neutral => "Nötr",
+            Domain.Entities.SignalType.Sell => "Sat",
+            Domain.Entities.SignalType.StrongSell => "Güçlü Sat",
+            _ => signal.SignalType.ToString()
+        };
 
-        return $"{symbol} generated a {signal.SignalType} signal with a technical score of {score} " +
-               $"and a confidence rate of {confidence}%.";
+        return $"{symbol} hissesi {score} teknik skor ve %{confidence} güven oranıyla {signalTypeText} sinyali üretti.";
     }
 
     private static string BuildBulletinContent(
@@ -139,9 +147,9 @@ public class BulletinService : IBulletinService
     {
         var lines = new List<string>
         {
-            $"# Daily Technical Analysis Bulletin - {bulletinDate:dd.MM.yyyy}",
+            $"# Günlük Teknik Analiz Bülteni - {bulletinDate:dd.MM.yyyy}",
             "",
-            $"Strong Buy: {strongBuyCount} | Buy: {buyCount} | Sell: {sellCount} | Strong Sell: {strongSellCount}",
+            $"Güçlü Al: {strongBuyCount} | Al: {buyCount} | Sat: {sellCount} | Güçlü Sat: {strongSellCount}",
             ""
         };
 
