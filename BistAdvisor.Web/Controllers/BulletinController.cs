@@ -9,90 +9,114 @@ namespace BistAdvisor.Web.Controllers;
 public class BulletinController : Controller
 {
     private readonly ApplicationDbContext _context;
-    
+
     public BulletinController(ApplicationDbContext context)
     {
         _context = context;
     }
 
-    public async Task<IActionResult> Index(DateOnly? date)
-{
-    var query = _context.DailyBulletins
-        .Include(b => b.Items)
-        .ThenInclude(i => i.Stock)
-        .AsQueryable();
-
-    DailyBulletin? bulletin;
-
-    if (date.HasValue)
+    public async Task<IActionResult> Index(DateOnly? date, string? symbol, string? signalType, decimal? minScore)
     {
-        bulletin = await query
-            .Where(b => b.BulletinDate == date.Value)
-            .OrderByDescending(b => b.GeneratedAt)
-            .FirstOrDefaultAsync();
-    }
-    else
-    {
-        bulletin = await query
-            .Where(b => b.Status == BulletinStatus.Active)
-            .OrderByDescending(b => b.GeneratedAt)
-            .FirstOrDefaultAsync();
-    }
+        var query = _context.DailyBulletins
+            .Include(b => b.Items)
+            .ThenInclude(i => i.Stock)
+            .AsQueryable();
 
-    var availableDates = await _context.DailyBulletins
-        .Select(b => b.BulletinDate)
-        .Distinct()
-        .OrderByDescending(d => d)
-        .Take(30)
-        .ToListAsync();
+        DailyBulletin? bulletin;
 
-    ViewData["AvailableDates"] = availableDates;
-    ViewData["SelectedDate"] = date;
+        if (date.HasValue)
+        {
+            bulletin = await query
+                .Where(b => b.BulletinDate == date.Value)
+                .OrderByDescending(b => b.GeneratedAt)
+                .FirstOrDefaultAsync();
+        }
+        else
+        {
+            bulletin = await query
+                .Where(b => b.Status == BulletinStatus.Active)
+                .OrderByDescending(b => b.GeneratedAt)
+                .FirstOrDefaultAsync();
+        }
 
-    if (bulletin is null)
-    {
-        return View((BulletinDto?)null);
-    }
+        var availableDates = await _context.DailyBulletins
+            .Select(b => b.BulletinDate)
+            .Distinct()
+            .OrderByDescending(d => d)
+            .Take(30)
+            .ToListAsync();
 
-    var bulletinDateStart = bulletin.BulletinDate.ToDateTime(TimeOnly.MinValue);
-    var stockIds = bulletin.Items.Select(i => i.StockId).ToList();
+        ViewData["AvailableDates"] = availableDates;
+        ViewData["SelectedDate"] = date;
+        ViewData["CurrentSymbol"] = symbol;
+        ViewData["CurrentSignalType"] = signalType;
+        ViewData["CurrentMinScore"] = minScore;
 
-    var changesOnBulletinDate = await _context.SignalChanges
-        .Where(c => stockIds.Contains(c.StockId) && c.ChangeTime >= bulletinDateStart)
-        .OrderByDescending(c => c.ChangeTime)
-        .ToListAsync();
+        if (bulletin is null)
+        {
+            return View((BulletinDto?)null);
+        }
 
-    var latestChangeByStock = changesOnBulletinDate
-        .GroupBy(c => c.StockId)
-        .ToDictionary(g => g.Key, g => g.First());
+        var bulletinDateStart = bulletin.BulletinDate.ToDateTime(TimeOnly.MinValue);
+        var stockIds = bulletin.Items.Select(i => i.StockId).ToList();
 
-    var dto = new BulletinDto
-    {
-        Id = bulletin.Id,
-        BulletinDate = bulletin.BulletinDate,
-        Title = bulletin.Title,
-        Summary = bulletin.Summary,
-        Status = bulletin.Status.ToString(),
-        GeneratedAt = bulletin.GeneratedAt,
-        Items = bulletin.Items
+        var changesOnBulletinDate = await _context.SignalChanges
+            .Where(c => stockIds.Contains(c.StockId) && c.ChangeTime >= bulletinDateStart)
+            .OrderByDescending(c => c.ChangeTime)
+            .ToListAsync();
+
+        var latestChangeByStock = changesOnBulletinDate
+            .GroupBy(c => c.StockId)
+            .ToDictionary(g => g.Key, g => g.First());
+
+        var items = bulletin.Items
             .OrderBy(i => i.Rank)
-            .Select(i => new BulletinItemDto
-            {
-                Symbol = i.Stock.Symbol,
-                CompanyName = i.Stock.CompanyName,
-                SignalType = i.SignalType.ToString(),
-                TotalScore = i.TotalScore,
-                ConfidenceRate = i.ConfidenceRate,
-                LastPrice = i.LastPrice,
-                DailyChangeRate = i.DailyChangeRate,
-                ReasonText = i.ReasonText,
-                PreviousSignalType = latestChangeByStock.TryGetValue(i.StockId, out var change)
-                    ? change.PreviousSignalType.ToString()
-                    : null
-            })
-            .ToList()
-    };
+            .AsEnumerable();
 
-    return View(dto);
-}
+        if (!string.IsNullOrWhiteSpace(symbol))
+        {
+            items = items.Where(i =>
+                i.Stock.Symbol.Contains(symbol, StringComparison.OrdinalIgnoreCase) ||
+                i.Stock.CompanyName.Contains(symbol, StringComparison.OrdinalIgnoreCase));
+        }
+
+        if (!string.IsNullOrWhiteSpace(signalType) &&
+            Enum.TryParse<Domain.Entities.SignalType>(signalType, true, out var parsedType))
+        {
+            items = items.Where(i => i.SignalType == parsedType);
+        }
+
+        if (minScore.HasValue)
+        {
+            items = items.Where(i => i.TotalScore >= minScore.Value);
+        }
+
+        var dto = new BulletinDto
+        {
+            Id = bulletin.Id,
+            BulletinDate = bulletin.BulletinDate,
+            Title = bulletin.Title,
+            Summary = bulletin.Summary,
+            Status = bulletin.Status.ToString(),
+            GeneratedAt = bulletin.GeneratedAt,
+            Items = items
+                .Select(i => new BulletinItemDto
+                {
+                    Symbol = i.Stock.Symbol,
+                    CompanyName = i.Stock.CompanyName,
+                    SignalType = i.SignalType.ToString(),
+                    TotalScore = i.TotalScore,
+                    ConfidenceRate = i.ConfidenceRate,
+                    LastPrice = i.LastPrice,
+                    DailyChangeRate = i.DailyChangeRate,
+                    ReasonText = i.ReasonText,
+                    PreviousSignalType = latestChangeByStock.TryGetValue(i.StockId, out var change)
+                        ? change.PreviousSignalType.ToString()
+                        : null
+                })
+                .ToList()
+        };
+        
+        return View(dto);
+    }
 }
