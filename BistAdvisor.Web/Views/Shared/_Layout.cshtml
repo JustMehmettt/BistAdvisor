@@ -4,55 +4,95 @@
     <meta charset="utf-8"/>
     <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
     <title>BistAdvisor - @ViewData["Title"]</title>
-    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/bootstrap/5.3.3/css/bootstrap.min.css"/>
+
+    <link rel="stylesheet"
+          href="https://cdnjs.cloudflare.com/ajax/libs/bootstrap/5.3.3/css/bootstrap.min.css"/>
+
     <link rel="stylesheet" href="~/css/site.css"/>
+
     <link rel="preconnect" href="https://fonts.googleapis.com">
-    <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@400;500;600&display=swap" rel="stylesheet">
+    <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@400;500;600&display=swap"
+          rel="stylesheet">
 </head>
+
 <body>
-<nav class="navbar navbar-expand-lg navbar-dark bg-dark">
+
+<nav class="navbar navbar-expand-lg navbar-dark bg-dark position-relative">
+
+    <a class="navbar-brand position-absolute start-0 ms-3"
+       href="/">
+        BistAdvisor
+    </a>
+
     <div class="container">
-        <a class="navbar-brand" href="/">BistAdvisor</a>
-        <div class="navbar-nav">
+
+        <div class="navbar-nav me-auto">
+
             <a class="nav-link"
                style="@(ViewContext.RouteData.Values["controller"]?.ToString() == "Dashboard" ? "color: #ffffff; font-weight: 600;" : "")"
-               href="/">Dashboard</a>
+               href="/">
+                Dashboard
+            </a>
+
             <a class="nav-link"
                style="@(ViewContext.RouteData.Values["controller"]?.ToString() == "Stocks" ? "color: #ffffff; font-weight: 600;" : "")"
-               href="/Stocks">Hisseler</a>
+               href="/Stocks">
+                Hisseler
+            </a>
+
             <a class="nav-link"
                style="@(ViewContext.RouteData.Values["controller"]?.ToString() == "Bulletin" ? "color: #ffffff; font-weight: 600;" : "")"
-               href="/Bulletin">Bülten</a>
+               href="/Bulletin">
+                Bülten
+            </a>
+
             <a class="nav-link"
                style="@(ViewContext.RouteData.Values["controller"]?.ToString() == "SignalHistory" ? "color: #ffffff; font-weight: 600;" : "")"
-               href="/SignalHistory">Sinyal Geçmişi</a>
+               href="/SignalHistory">
+                Sinyal Geçmişi
+            </a>
+
             <a class="nav-link"
                style="@(ViewContext.RouteData.Values["controller"]?.ToString() == "Backtest" ? "color: #ffffff; font-weight: 600;" : "")"
-               href="/Backtest">Backtest</a>
-            <a class="nav-link"
-               style="@(ViewContext.RouteData.Values["controller"]?.ToString() == "Admin" ? "color: #ffffff; font-weight: 600;" : "")"
-               href="/Admin">Yönetim</a>
-            @if (User.Identity?.IsAuthenticated == true)
-            {
-                <form method="post" asp-controller="Account" asp-action="Logout" class="d-inline">
-                    <button type="submit" class="btn btn-sm btn-outline-light ms-2">Çıkış</button>
-                </form>
-            }
+               href="/Backtest">
+                Backtest
+            </a>
+
         </div>
+
+        @if (User.Identity?.IsAuthenticated == true)
+        {
+            <form method="post"
+                  asp-controller="Account"
+                  asp-action="Logout"
+                  class="ms-auto">
+
+                <button type="submit"
+                        class="btn btn-sm btn-outline-light">
+                    Çıkış
+                </button>
+            </form>
+        }
+
     </div>
 </nav>
+
 
 <div class="container mt-4">
     @RenderBody()
 </div>
+
 
 <footer class="container mt-5 mb-3 text-muted text-center small">
     <hr/>
     Burada yer alan bilgiler yatırım danışmanlığı kapsamında değildir.
 </footer>
 
+
 <script src="https://cdnjs.cloudflare.com/ajax/libs/bootstrap/5.3.3/js/bootstrap.bundle.min.js"></script>
 <script src="~/js/site.js"></script>
+
 @await RenderSectionAsync("Scripts", required: false)
+
 </body>
 </html>

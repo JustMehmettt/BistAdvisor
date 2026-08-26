@@ -25,17 +25,18 @@ public class AccountController : Controller
 
     [AllowAnonymous]
     [HttpPost]
-    public async Task<IActionResult> Login(string password, string? returnUrl)
+    public async Task<IActionResult> Login(string username, string password, string? returnUrl)
     {
+        var correctUsername = _configuration["AdminUsername"] ?? "admin";
         var correctPassword = _configuration["AdminPassword"];
 
-        if (string.IsNullOrEmpty(correctPassword) || password != correctPassword)
+        if (string.IsNullOrEmpty(correctPassword) || username != correctUsername || password != correctPassword)
         {
-            ViewData["Error"] = "Şifre hatalı.";
+            ViewData["Error"] = "Kullanıcı adı veya şifre hatalı.";
             return View();
         }
 
-        var claims = new List<Claim> { new(ClaimTypes.Name, "Admin") };
+        var claims = new List<Claim> { new(ClaimTypes.Name, correctUsername) };
         var identity = new ClaimsIdentity(claims, CookieAuthenticationDefaults.AuthenticationScheme);
         var principal = new ClaimsPrincipal(identity);
 
