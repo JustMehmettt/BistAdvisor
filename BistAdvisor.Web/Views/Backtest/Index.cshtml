@@ -1,0 +1,138 @@
+﻿@using BistAdvisor.Application.Dtos
+@model BacktestResultDto?
+
+@{
+    ViewData["Title"] = "Backtest";
+    var symbols = ViewData["Symbols"] as List<string> ?? new List<string>();
+    var fromDate = (DateOnly)ViewData["CurrentFromDate"]!;
+    var toDate = (DateOnly)ViewData["CurrentToDate"]!;
+}
+
+<h1 class="mb-2">Backtest (Geriye Dönük Test)</h1>
+<div class="alert alert-warning">
+    <strong>Önemli Not:</strong> Bu araç, geçmiş sinyal verilerine dayanarak basitleştirilmiş bir simülasyon sunar.
+    Komisyon, kayma (slippage) ve gerçek emir gecikmesi gibi faktörleri hesaba katmaz. Sonuçlar
+    <strong>yalnızca eğitim/analiz amaçlıdır</strong>, geleceğe dönük bir garanti veya yatırım tavsiyesi değildir.
+</div>
+
+<form method="get" class="row g-2 mb-4">
+    <div class="col-md-3">
+        <div class="sc-combobox">
+            <button type="button" class="sc-combobox-trigger" data-role="trigger">
+                <span data-role="label">Tüm Hisseler</span>
+                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+                    <path d="M7 9l5-5 5 5M7 15l5 5 5-5" stroke="#64748B" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/>
+                </svg>
+            </button>
+            <div class="sc-combobox-panel" data-role="panel">
+                <input type="text" class="sc-combobox-search" data-role="search" placeholder="Hisse ara..." autocomplete="off" />
+                <ul class="sc-combobox-list" data-role="list">
+                    <li class="sc-combobox-option" data-value="">Tüm Hisseler</li>
+                    @foreach (var sym in symbols)
+                    {
+                        <li class="sc-combobox-option" data-value="@sym">@sym</li>
+                    }
+                </ul>
+            </div>
+            <input type="hidden" name="symbol" data-role="hidden" value="@ViewData["CurrentSymbol"]" />
+        </div>
+    </div>
+    <div class="col-md-3">
+        <div class="sc-float-field">
+            <input type="date" name="fromDate" id="fromdate-input" placeholder=" " value="@fromDate.ToString("yyyy-MM-dd")" />
+            <label for="fromdate-input">Başlangıç Tarihi</label>
+        </div>
+    </div>
+    <div class="col-md-3">
+        <div class="sc-float-field">
+            <input type="date" name="toDate" id="todate-input" placeholder=" " value="@toDate.ToString("yyyy-MM-dd")" />
+            <label for="todate-input">Bitiş Tarihi</label>
+        </div>
+    </div>
+    <div class="col-md-2">
+        <button type="submit" class="btn btn-primary w-100">Çalıştır</button>
+    </div>
+</form>
+
+@if (Model is not null)
+{
+    <div class="row g-3 mb-4">
+        <div class="col-md-3">
+            <div class="card text-center">
+                <div class="card-body">
+                    <h6 class="text-muted">Toplam İşlem</h6>
+                    <h3>@Model.TotalTrades</h3>
+                </div>
+            </div>
+        </div>
+        <div class="col-md-3">
+            <div class="card text-center">
+                <div class="card-body">
+                    <h6 class="text-muted">Kazanma Oranı</h6>
+                    <h3>@Model.WinRate%</h3>
+                </div>
+            </div>
+        </div>
+        <div class="col-md-3">
+            <div class="card text-center">
+                <div class="card-body">
+                    <h6 class="text-muted">Ort. Getiri</h6>
+                    <h3 style="color:@(Model.AverageReturnPercent >= 0 ? "#1E9E4A" : "#D6373E");">@Model.AverageReturnPercent%</h3>
+                </div>
+            </div>
+        </div>
+        <div class="col-md-3">
+            <div class="card text-center">
+                <div class="card-body">
+                    <h6 class="text-muted">Toplam Getiri</h6>
+                    <h3 style="color:@(Model.TotalReturnPercent >= 0 ? "#1E9E4A" : "#D6373E");">@Model.TotalReturnPercent%</h3>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <h4>İşlem Detayları</h4>
+    <table class="table-dynamic">
+        <thead>
+            <tr>
+                <th>Hisse</th>
+                <th>Giriş Tarihi</th>
+                <th>Giriş Fiyatı</th>
+                <th>Çıkış Tarihi</th>
+                <th>Çıkış Fiyatı</th>
+                <th>Getiri</th>
+                <th>Durum</th>
+            </tr>
+        </thead>
+        <tbody>
+            @foreach (var trade in Model.Trades)
+            {
+                var returnColor = trade.ReturnPercent switch
+                {
+                    > 0 => "#1E9E4A",
+                    < 0 => "#D6373E",
+                    _ => "#222"
+                };
+
+                <tr>
+                    <td><a href="/Stocks/Detail/@trade.Symbol" class="text-decoration-none" style="color:#0A8DD0; font-weight:600;">@trade.Symbol</a></td>
+                    <td>@trade.EntryDate.ToLocalTime().ToString("dd.MM.yyyy")</td>
+                    <td>@trade.EntryPrice.ToString("F2")</td>
+                    <td>@(trade.ExitDate?.ToLocalTime().ToString("dd.MM.yyyy") ?? "-")</td>
+                    <td>@(trade.ExitPrice?.ToString("F2") ?? "-")</td>
+                    <td style="color:@returnColor;">@(trade.ReturnPercent.HasValue ? $"{trade.ReturnPercent:F2}%" : "-")</td>
+                    <td>
+                        @if (trade.IsOpen)
+                        {
+                            <span class="pill pill-gray">Açık</span>
+                        }
+                        else
+                        {
+                            <span class="pill @(trade.ReturnPercent > 0 ? "pill-green" : "pill-red")">Kapalı</span>
+                        }
+                    </td>
+                </tr>
+            }
+        </tbody>
+    </table>
+}

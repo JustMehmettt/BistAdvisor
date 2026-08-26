@@ -27,6 +27,9 @@
                style="@(ViewContext.RouteData.Values["controller"]?.ToString() == "SignalHistory" ? "color: #ffffff; font-weight: 600;" : "")"
                href="/SignalHistory">Sinyal Geçmişi</a>
             <a class="nav-link"
+               style="@(ViewContext.RouteData.Values["controller"]?.ToString() == "Backtest" ? "color: #ffffff; font-weight: 600;" : "")"
+               href="/Backtest">Backtest</a>
+            <a class="nav-link"
                style="@(ViewContext.RouteData.Values["controller"]?.ToString() == "Admin" ? "color: #ffffff; font-weight: 600;" : "")"
                href="/Admin">Yönetim</a>
             @if (User.Identity?.IsAuthenticated == true)

@@ -1,10 +1,12 @@
 using System.Runtime.InteropServices.JavaScript;
+using BistAdvisor.Application.Backtesting;
 using BistAdvisor.Application.Bulletins;
 using BistAdvisor.Application.Dtos;
 using BistAdvisor.Application.Indicators;
 using BistAdvisor.Application.Jobs;
 using BistAdvisor.Application.MarketData;
 using BistAdvisor.Domain.Entities;
+using BistAdvisor.Infrastructure.Backtesting;
 using BistAdvisor.Infrastructure.Bulletins;
 using BistAdvisor.Infrastructure.Data;
 using BistAdvisor.Infrastructure.MarketData;
@@ -13,6 +15,7 @@ using BistAdvisor.Infrastructure.Indicators;
 using BistAdvisor.Infrastructure.Jobs;
 using DomainSignalType = BistAdvisor.Domain.Entities.SignalType;
 using Microsoft.AspNetCore.Mvc;
+using Microsoft.Extensions.DependencyInjection.Extensions;
 using Serilog;
 
 Log.Logger = new LoggerConfiguration()
@@ -51,6 +54,7 @@ try
     builder.Services.AddScoped<IBulletinService, BulletinService>();
     builder.Services.AddScoped<IJobLockService, JobLockService>();
     builder.Services.AddScoped<IMarketHoursService, MarketHoursService>();
+    builder.Services.AddScoped<IBacktestService, BacktestService>();
     
     var app = builder.Build();
 
