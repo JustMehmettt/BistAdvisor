@@ -96,6 +96,8 @@ public class Worker : BackgroundService
                 await signalService.CalculateAndSaveSignalAsync(stock.Symbol, stoppingToken);
 
                 log.InsertedRowCount = insertedCount;
+                log.RetrievedRowCount = insertedCount;
+                log.UpdatedRowCount = 0;
                 log.Status = JobStatus.Success;
                 log.CompletedAt = DateTimeOffset.UtcNow;
 

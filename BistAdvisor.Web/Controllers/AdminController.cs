@@ -106,6 +106,8 @@ public async Task<IActionResult> RunDataSync()
                 await _signalService.CalculateAndSaveSignalAsync(stock.Symbol);
 
                 log.InsertedRowCount = insertedCount;
+                log.RetrievedRowCount = insertedCount;
+                log.UpdatedRowCount = 0;
                 log.Status = JobStatus.Success;
                 log.CompletedAt = DateTimeOffset.UtcNow;
             }

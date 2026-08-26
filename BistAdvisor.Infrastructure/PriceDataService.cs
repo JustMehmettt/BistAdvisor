@@ -55,7 +55,9 @@ public class PriceDataService : IPriceDataService
 
                 _context.MarketDataRawLogs.Add(rawLog);
 
-                return await PersistPriceBarsAsync(stock, points, cancellationToken);
+                var (insertedCount, _) = await PersistPriceBarsAsync(stock, points, cancellationToken);
+
+                return insertedCount;
             }
             catch (Exception ex)
             {
@@ -79,7 +81,7 @@ public class PriceDataService : IPriceDataService
         throw new InvalidOperationException($"'{stockSymbol}' için veri çekilemedi, {maxRetries} deneme başarısız oldu.", lastException);
     }
 
-    private async Task<int> PersistPriceBarsAsync(
+    private async Task<(int Inserted, int Retrieved)> PersistPriceBarsAsync(
         Stock stock,
         IReadOnlyList<MarketDataPoint> points,
         CancellationToken cancellationToken)
@@ -132,6 +134,6 @@ public class PriceDataService : IPriceDataService
 
         await _context.SaveChangesAsync(cancellationToken);
 
-        return newBars.Count;
+        return (newBars.Count, points.Count);
     }
 }
