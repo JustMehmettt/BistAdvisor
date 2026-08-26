@@ -34,6 +34,13 @@
 
 <form method="get" class="row g-2 mb-4">
     <div class="col-md-3">
+        <div class="sc-float-field">
+            <input type="text" name="symbol" id="symbol-search-input" placeholder=" "
+                   value="@ViewData["CurrentSymbol"]" />
+            <label for="symbol-search-input">Hisse/Şirket Ara</label>
+        </div>
+    </div>
+    <div class="col-md-3">
         <div class="sc-combobox" data-auto-submit>
             <button type="button" class="sc-combobox-trigger" data-role="trigger">
                 <span data-role="label">Tüm Sinyaller</span>
@@ -54,6 +61,9 @@
             </div>
             <input type="hidden" name="signalType" data-role="hidden" value="@ViewData["CurrentSignalType"]" />
         </div>
+    </div>
+    <div class="col-md-2">
+        <button type="submit" class="btn btn-primary w-100">Filtrele</button>
     </div>
 </form>
 
@@ -98,8 +108,7 @@ else
                 @for (var i = 1; i <= totalPages; i++)
                 {
                     <li class="page-item @(i == page ? "active" : "")">
-                        <a class="page-link" href="/SignalHistory?page=@i&signalType=@ViewData["CurrentSignalType"]">@i</a>
-                    </li>
+                        <a class="page-link" href="/SignalHistory?page=@i&signalType=@ViewData["CurrentSignalType"]&symbol=@ViewData["CurrentSymbol"]">@i</a>                    </li>
                 }
             </ul>
         </nav>

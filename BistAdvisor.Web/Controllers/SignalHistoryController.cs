@@ -15,7 +15,7 @@ public class SignalHistoryController : Controller
         _context = context;
     }
 
-    public async Task<IActionResult> Index(string? signalType, int page = 1, int pageSize = 30)
+    public async Task<IActionResult> Index(string? signalType, string symbol, int page = 1, int pageSize = 30)
     {
         var query = _context.SignalChanges
             .Include(c => c.Stock)
@@ -25,6 +25,13 @@ public class SignalHistoryController : Controller
             Enum.TryParse<Domain.Entities.SignalType>(signalType, true, out var parsedType))
         {
             query = query.Where(c => c.NewSignalType == parsedType);
+        }
+
+        if (!string.IsNullOrWhiteSpace(symbol))
+        {
+            query = query.Where(c =>
+                c.Stock.Symbol.Contains(symbol) ||
+                c.Stock.CompanyName.Contains(symbol));
         }
 
         var totalCount = await query.CountAsync();
