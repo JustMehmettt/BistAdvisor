@@ -5,6 +5,7 @@
         <Nullable>enable</Nullable>
         <ImplicitUsings>enable</ImplicitUsings>
         <UserSecretsId>dotnet-BistAdvisor.Worker-fafeaaa6-58fa-442c-9d1c-84a3381142ca</UserSecretsId>
+        <DockerDefaultTargetOS>Linux</DockerDefaultTargetOS>
     </PropertyGroup>
 
     <ItemGroup>
@@ -20,5 +21,11 @@
       <ProjectReference Include="..\BistAdvisor.Domain\BistAdvisor.Domain.csproj" />
       <ProjectReference Include="..\BistAdvisor.Application\BistAdvisor.Application.csproj" />
       <ProjectReference Include="..\BistAdvisor.Infrastructure\BistAdvisor.Infrastructure.csproj" />
+    </ItemGroup>
+
+    <ItemGroup>
+      <Content Include="..\.dockerignore">
+        <Link>.dockerignore</Link>
+      </Content>
     </ItemGroup>
 </Project>
