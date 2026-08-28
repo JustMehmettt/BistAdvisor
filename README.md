@@ -16,6 +16,7 @@ BIST (Borsa İstanbul) hisseleri için teknik analiz, al-sat sinyali üretimi ve
 - [Mimari Diyagramı](#mimari-diyagramı)
 - [Kurulum](#kurulum)
 - [Çalıştırma](#çalıştırma)
+- [Docker ile Çalıştırma](#docker-ile-çalıştırma)
 - [API Uç Noktaları](#api-uç-noktaları)
 - [Postman Koleksiyonu](#postman-koleksiyonu)
 - [Web Arayüzü](#web-arayüzü)
@@ -47,6 +48,7 @@ Sistem, bir arka plan servisi aracılığıyla periyodik olarak (varsayılan 15 
 - **REST API**: 13 uç nokta ile hisse, fiyat, indikatör, sinyal, bülten ve iş verilerine sayfalama/filtrelemeyle erişim; Swagger dokümantasyonu ve hazır Postman koleksiyonu
 - **Yönetim paneli**: Kullanıcı adı/şifre korumalı, gezinme menüsünde bağlantısı gösterilmeyen (yalnızca doğrudan adresle erişilen) gizli panel; manuel veri toplama/bülten oluşturma tetikleme (asenkron, geri bildirimli), hisse aktif/pasif yönetimi, sistem ayarları görüntüleme, iş takip logları, piyasa durumu, veri kaynağı bağlantı testi
 - **Geriye dönük test (backtest)**: Geçmiş sinyal verilerine dayalı basitleştirilmiş al-sat simülasyonu; toplam işlem, kazanma oranı, ortalama/toplam getiri özeti
+- **Container'laştırma**: Docker ve Docker Compose ile Web, Worker ve SQL Server'ı tek komutla ayağa kaldırma desteği
 - **Yapılandırılmış loglama**: Serilog ile hem konsola hem günlük olarak dönen dosyalara (14 gün saklama) loglama
 - **Kapsamlı test paketi**: 57 birim ve entegrasyon testi (indikatör hesaplama, puanlama, veri senkronizasyonu, sinyal üretimi, yeniden deneme mekanizması, hata izolasyonu, bülten kuralları, API filtreleme/sayfalama)
 
@@ -62,6 +64,7 @@ Sistem, bir arka plan servisi aracılığıyla periyodik olarak (varsayılan 15 
 | Piyasa verisi | Yahoo Finance (`OoplesFinance.YahooFinanceAPI`) |
 | Loglama | Serilog (konsol + dönen dosya) |
 | Kimlik doğrulama | Çerez tabanlı, kullanıcı adı/şifre korumalı yönetim paneli girişi |
+| Container'laştırma | Docker, Docker Compose |
 | Test | xUnit, EF Core InMemory, `Microsoft.AspNetCore.Mvc.Testing` |
 | API dokümantasyonu | Swagger / OpenAPI, Postman koleksiyonu |
 
@@ -282,7 +285,7 @@ graph TD
 ### Gereksinimler
 
 - [.NET 8 SDK](https://dotnet.microsoft.com/download/dotnet/8.0)
-- SQL Server (Developer/Express sürümü veya Docker container)
+- SQL Server (Developer/Express sürümü veya Docker container — bkz. [Docker ile Çalıştırma](#docker-ile-çalıştırma))
 - (Önerilir) JetBrains Rider veya Visual Studio 2022
 
 ### Adımlar
@@ -365,6 +368,51 @@ Worker, başlangıçta ve ardından yapılandırılan aralıkla (varsayılan 15 
 
 > **Not:** Worker'ı hiç çalıştırmadan da web arayüzünü/API'yi kullanabilirsiniz — ancak yeni veri, Yönetim panelinden manuel tetikleme yapılmadığı sürece sisteme girmez.
 
+## Docker ile Çalıştırma
+
+Sistem, Docker Compose kullanılarak SQL Server dahil tüm bileşenleriyle (Web, Worker, veritabanı) container'lar halinde çalıştırılabilir.
+
+### Gereksinimler
+
+- [Docker Desktop](https://www.docker.com/products/docker-desktop/) (WSL 2 tabanlı, Windows için)
+
+### Çalıştırma
+
+1. **SQL Server container'ını başlatın**
+
+   ```bash
+   docker-compose up -d sqlserver
+   ```
+
+   SQL Server "healthy" duruma geçtikten sonra (`docker-compose ps` ile kontrol edilebilir), migration'ları container'daki veritabanına uygulayın:
+
+   ```bash
+   dotnet ef database update --project BistAdvisor.Infrastructure --startup-project BistAdvisor.Web --connection "Server=localhost,14330;Database=BistAdvisorDb;User Id=sa;Password=YourStrong!Passw0rd;TrustServerCertificate=True;Encrypt=False;"
+   ```
+
+2. **Tüm sistemi (Web + Worker) build edip başlatın**
+
+   ```bash
+   docker-compose up -d --build
+   ```
+
+3. **Durumu kontrol edin**
+
+   ```bash
+   docker-compose ps
+   docker-compose logs web --tail 20
+   docker-compose logs worker --tail 20
+   ```
+
+4. Web arayüzüne `http://localhost:5010` adresinden erişebilirsiniz.
+
+### Önemli Notlar
+
+- **Port çakışması**: Eğer bilgisayarınızda zaten yerel bir SQL Server çalışıyorsa (varsayılan port 1433'ü kullanıyorsa), `docker-compose.yml` dosyasındaki SQL Server portu, host tarafında `14330:1433` olarak farklı bir porta haritalanmıştır; container'lar arası iletişim (Web/Worker'dan SQL Server'a) her zaman iç ağ üzerinden, standart 1433 portuyla gerçekleşir.
+- **Güvenlik**: `docker-compose.yml` dosyasındaki `SA_PASSWORD` ve `AdminPassword` değerleri yalnızca yerel geliştirme/deneme amaçlıdır ve bu haliyle gerçek bir ortamda kullanılmamalıdır. Üretim ortamı için bu değerlerin Docker secrets, ortam değişkenleri veya bir gizli bilgi yönetim servisi (örn. Azure Key Vault) üzerinden sağlanması önerilir.
+- **Veri kalıcılığı**: SQL Server verileri `sqlserver-data` adlı bir Docker volume'unda saklanır; `docker-compose down` komutu bu veriyi silmez, ancak `docker-compose down -v` komutu **volume'ları da siler** ve veritabanını sıfırlar.
+- **Ayarları değiştirme**: `docker-compose.yml` içindeki `environment` bölümünde bir değer değiştirildiğinde, ilgili servisin yeniden build edilmesine gerek yoktur; `docker-compose up -d <servis-adı>` komutu container'ı güncel tanımla yeniden oluşturur.
+
 ## API Uç Noktaları
 
 | Metot | Uç Nokta | Açıklama |
@@ -434,6 +482,7 @@ Detaylı test senaryoları ve sonuçları için `TestScenariosAndResults.md` dos
 - **İş takip kayıtlarının basitleştirilmesi**: `DataFetchLog` tablosundaki `RetrievedRowCount` alanı, veri servisinin dış arayüzü değiştirilmediği için `InsertedRowCount` ile eşit kabul edilir; `UpdatedRowCount` sistemde "güncelleme" kavramı bulunmadığından her zaman sıfırdır.
 - **Backtest basitleştirmesi**: Geriye dönük test modülü komisyon, kayma (slippage) ve gerçek emir gecikmesini hesaba katmaz; yalnızca eğitim/analiz amaçlıdır.
 - **Repository deseni kullanılmamıştır**: Veri erişimi, ayrı bir repository katmanı yerine servis ve controller sınıflarında doğrudan `DbContext` üzerinden yapılır. Bu, projenin mevcut ölçeğinde bilinçli bir tercihtir; test edilebilirlik ihtiyacı EF Core InMemory veritabanıyla zaten karşılanmaktadır.
+- **Docker container güvenliği**: `docker-compose.yml` dosyasındaki veritabanı/yönetim paneli kimlik bilgileri yalnızca yerel geliştirme amaçlıdır; üretim dağıtımı için ayrı bir gizli bilgi yönetimi stratejisi gereklidir.
 
 ## Proje Kapsamı Dışında Bırakılanlar
 
